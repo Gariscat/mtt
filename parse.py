@@ -30,7 +30,7 @@ for json_path in json_paths:
 print(len(pitch_count))
 """
 
-class MTTDataset(Dataset):
+class LeadNoteDataset(Dataset):
     def __init__(self, data) -> None:
         super().__init__()
         self._data = data
@@ -80,7 +80,7 @@ if __name__ == '__main__':
             mel_right_tensor,
         )]
         
-        torch.save(MTTDataset(processed_data), os.path.join(DATA_PATH, 'processed.pt'))
+        torch.save(LeadNoteDataset(processed_data), os.path.join(DATA_PATH, 'processed.pt'))
             
             
         
