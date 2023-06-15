@@ -70,8 +70,8 @@ if __name__ == '__main__':
                 pitches[i] = PITCH2ID[key_name]
                 values[i] = note_value * NOTE_VALUE_SCALE
         
-        mel_left_tensor = read_image(os.path.join(DATA_PATH, mel_path_left))
-        mel_right_tensor = read_image(os.path.join(DATA_PATH, mel_path_right))
+        mel_left_tensor = read_image(os.path.join(DATA_PATH, mel_path_left)).float() / 255
+        mel_right_tensor = read_image(os.path.join(DATA_PATH, mel_path_right)).float() / 255
         
         processed_data += [(
             torch.LongTensor(pitches),
