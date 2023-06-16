@@ -362,7 +362,7 @@ class TransformerLM(nn.Module):
             hidden_states = layer_module(hidden_states, attention_mask=attention_mask)
 
         # TODO: project hidden size to output vocabulary size
-        logits = self.dense_pitch(hidden_states)
-        scores_onset = self.dense_value(hidden_states)
+        pitch_logits = self.dense_pitch(hidden_states)
+        value_estimates = self.dense_value(hidden_states)
 
-        return logits, scores_onset, hidden_states
+        return pitch_logits, value_estimates, hidden_states
