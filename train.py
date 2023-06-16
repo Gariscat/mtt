@@ -19,7 +19,7 @@ if __name__ == '__main__':
     parser.add_argument('--mlp_dim', type=int, default=512)
     
     parser.add_argument('--dropout', type=float, default=0.2)
-    parser.add_argument('--out_dim', type=int, default=128)
+    parser.add_argument('--out_dim', type=int, default=96)
     parser.add_argument('--extractor_name', type=str, default='SimpleViT')
     
     parser.add_argument('--max_epochs', type=int, default=10)
@@ -52,7 +52,7 @@ if __name__ == '__main__':
         save_dir='./ckpt',
     )
     trainer = pl.Trainer(
-        accelerator="gpu",
+        accelerator="cpu",
         devices="auto",
         logger=wandb_logger,
         max_epochs=args.max_epochs,

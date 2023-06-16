@@ -58,6 +58,8 @@ class LeadModel(pl.LightningModule):
         # (B, C, H, W) -> (B, C, H, H, N) -> (B, N, C, H, H) -> (B*N, C, H, H)
         extracted = self.extractor(input_tensor)  # (B*N, O)
         extracted = extracted.reshape(B, N, -1)  # (B, N, O)
+        """print(extracted.size())
+        exit()"""
         
         pitch_logits, value_estimates, _ = self.transformer(extracted)
         return pitch_logits, value_estimates
@@ -74,6 +76,11 @@ class LeadModel(pl.LightningModule):
         pitch_loss_func = nn.CrossEntropyLoss()
         value_loss_func = nn.MSELoss()
         
+        pitch_logits = pitch_logits.reshape(-1, self.transformer.config.vocab_size)
+        pitch_gt = pitch_gt.flatten()
+        value_estimates = value_estimates.flatten()
+        value_gt = value_gt.flatten()
+        
         loss = self.loss_alpha * pitch_loss_func(pitch_logits, pitch_gt) + (1 - self.loss_alpha) * value_loss_func(value_estimates, value_gt)
         self.log('train_loss', loss)
         return loss
@@ -85,6 +92,13 @@ class LeadModel(pl.LightningModule):
         pitch_logits, value_estimates = self.forward(mel_tensor)
         pitch_loss_func = nn.CrossEntropyLoss()
         value_loss_func = nn.MSELoss()
+        
+        # print(pitch_logits.size(), pitch_gt.size(), value_estimates.size(), value_gt.size())
+        
+        pitch_logits = pitch_logits.reshape(-1, self.transformer.config.vocab_size)
+        pitch_gt = pitch_gt.flatten()
+        value_estimates = value_estimates.flatten()
+        value_gt = value_gt.flatten()
         
         loss = self.loss_alpha * pitch_loss_func(pitch_logits, pitch_gt) + (1 - self.loss_alpha) * value_loss_func(value_estimates, value_gt)
         self.log('train_loss', loss)

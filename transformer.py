@@ -364,5 +364,7 @@ class TransformerLM(nn.Module):
         # TODO: project hidden size to output vocabulary size
         pitch_logits = self.dense_pitch(hidden_states)
         value_estimates = self.dense_value(hidden_states)
+        """print(pitch_logits.size(), value_estimates.size())
+        exit()"""
 
         return pitch_logits, value_estimates, hidden_states
