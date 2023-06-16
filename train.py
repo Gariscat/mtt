@@ -4,7 +4,7 @@ import argparse
 from pytorch_lightning.loggers import WandbLogger
 import os
 from parse import DATA_PATH, LeadNoteDataset
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, ConcatDataset
 g = torch.Generator()
 g.manual_seed(0)
 
@@ -39,7 +39,11 @@ if __name__ == '__main__':
         loss_alpha=args.loss_alpha
     )
     
-    dataset = torch.load(os.path.join(DATA_PATH, 'processed.pt'))
+    data_list = []
+    for fp in [_ for _ in os.listdir(DATA_PATH) if '.pt' in fp]:
+        data_list += [torch.load(os.path.join(DATA_PATH, fp))]
+    dataset = ConcatDataset(data_list)
+    
     train_set, val_set = random_split(dataset, [0.8, 0.2], generator=g)
     train_loader = DataLoader(dataset=train_set, batch_size=2,)
     val_loader = DataLoader(dataset=val_set, batch_size=2,)
