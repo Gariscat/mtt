@@ -14,7 +14,7 @@ if __name__ == '__main__':
     parser.add_argument('--patch_size', type=int, default=4)
     parser.add_argument('--num_classes', type=int, default=512)
     parser.add_argument('--dim', type=int, default=512)
-    parser.add_argument('--depth', type=int, default=6)
+    parser.add_argument('--depth', type=int, default=3)
     parser.add_argument('--heads', type=int, default=16)
     parser.add_argument('--mlp_dim', type=int, default=512)
     

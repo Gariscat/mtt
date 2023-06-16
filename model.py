@@ -42,11 +42,19 @@ class LeadModel(pl.LightningModule):
             from torchvision.models import resnet18
             self.extractor_backbone = resnet18(weights=backbone_config['weights'])  # IMAGENET1K_V1
         """
-        self.extractor = nn.Sequential(
-            self.extractor_backbone,
-            nn.Dropout(backbone_config['dropout']),
-            nn.Linear(backbone_config['num_classes'], backbone_config['out_dim'])
-        )
+        if 'vit' in str(type(self.extractor_backbone)):
+            self.extractor = nn.Sequential(
+                self.extractor_backbone,
+                nn.Dropout(backbone_config['dropout']),
+                nn.Linear(backbone_config['num_classes'], backbone_config['out_dim'])
+            )
+        else:
+            self.extractor = nn.Sequential(
+                nn.Conv2d(6, 3, kernel_size=1),
+                self.extractor_backbone,
+                nn.Dropout(backbone_config['dropout']),
+                nn.Linear(backbone_config['num_classes'], backbone_config['out_dim'])
+            )
         
         self.transformer = TransformerLM(transformer_config)
         
