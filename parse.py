@@ -30,7 +30,7 @@ for json_path in json_paths:
 print(len(pitch_count))
 """
 
-class MTTDataset(Dataset):
+class LeadNoteDataset(Dataset):
     def __init__(self, data) -> None:
         super().__init__()
         self._data = data
@@ -70,8 +70,8 @@ if __name__ == '__main__':
                 pitches[i] = PITCH2ID[key_name]
                 values[i] = note_value * NOTE_VALUE_SCALE
         
-        mel_left_tensor = read_image(os.path.join(DATA_PATH, mel_path_left))
-        mel_right_tensor = read_image(os.path.join(DATA_PATH, mel_path_right))
+        mel_left_tensor = read_image(os.path.join(DATA_PATH, mel_path_left)).float() / 255
+        mel_right_tensor = read_image(os.path.join(DATA_PATH, mel_path_right)).float() / 255
         
         processed_data += [(
             torch.LongTensor(pitches),
@@ -80,7 +80,7 @@ if __name__ == '__main__':
             mel_right_tensor,
         )]
         
-        torch.save(MTTDataset(processed_data), os.path.join(DATA_PATH, 'processed.pt'))
+        torch.save(LeadNoteDataset(processed_data), os.path.join(DATA_PATH, 'processed.pt'))
             
             
         
