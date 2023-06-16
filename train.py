@@ -40,7 +40,7 @@ if __name__ == '__main__':
     )
     
     data_list = []
-    for fp in [_ for _ in os.listdir(DATA_PATH) if '.pt' in fp]:
+    for fp in [_ for _ in os.listdir(DATA_PATH) if '.pt' in _]:
         data_list += [torch.load(os.path.join(DATA_PATH, fp))]
     dataset = ConcatDataset(data_list)
     
