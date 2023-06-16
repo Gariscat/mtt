@@ -12,7 +12,7 @@ NUM_BARS = 8
 RESOLUTION = 1 / 16
 MAX_LENGTH = int(NUM_BARS/RESOLUTION)
 NOTE_VALUE_SCALE = 1.
-FILE_IDS = [str(i) for i in range(1024)]
+FILE_IDS = [str(i) for i in range(64)]
 
 """
 pitch_count = {}
