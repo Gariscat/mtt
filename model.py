@@ -26,12 +26,12 @@ class LeadModel(pl.LightningModule):
         
         if backbone_config['extractor_name'] == 'SimpleViT':
             self.extractor_backbone = SimpleViT(
-                image_size=backbone_config['image_size'],  # 256
-                patch_size=backbone_config['image_size'],  # 32
-                num_classes=backbone_config['image_size'],  # 1000
+                image_size=backbone_config['image_size'],  # 128
+                patch_size=backbone_config['patch_size'],  # 4
+                num_classes=backbone_config['num_classes'],  # 1000
                 dim=backbone_config['dim'],  # 1024
                 depth=backbone_config['depth'],  # 6
-                heads=backbone_config['head'],  # 16
+                heads=backbone_config['heads'],  # 16
                 mlp_dim=backbone_config['mlp_dim'],  # 2048
                 channels=6,  # 2*3
             )   
