@@ -12,13 +12,13 @@ NUM_BARS = 8
 RESOLUTION = 1 / 16
 MAX_LENGTH = int(NUM_BARS/RESOLUTION)
 NOTE_VALUE_SCALE = 1.
-FILE_IDS = [str(i) for i in range(64)]
+FILE_IDS = [str(i) for i in range(100)]
 
 """
 pitch_count = {}
 
-for json_path in json_paths:
-    with open(os.path.join(DATA_PATH, json_path), 'r') as f:
+for id in FILE_IDS:
+    with open(os.path.join(DATA_PATH, f'track-{id}.json'), 'r') as f:
         raw = json.load(f)
         note_dict_list = raw['patterns'][0]['core']['notes']  # 0-lead, 1-chord, 2-bass, 3-sub
 
@@ -84,6 +84,6 @@ if __name__ == '__main__':
             
             
         
-                
+    
 # print(PITCH2ID)
 

@@ -28,7 +28,7 @@ class LeadModel(pl.LightningModule):
             self.extractor_backbone = SimpleViT(
                 image_size=backbone_config['image_size'],  # 128
                 patch_size=backbone_config['patch_size'],  # 4
-                num_classes=backbone_config['num_classes'],  # 1000
+                num_classes=backbone_config['num_classes'],  # 512
                 dim=backbone_config['dim'],  # 1024
                 depth=backbone_config['depth'],  # 6
                 heads=backbone_config['heads'],  # 16
@@ -45,7 +45,7 @@ class LeadModel(pl.LightningModule):
         self.extractor = nn.Sequential(
             self.extractor_backbone,
             nn.Dropout(backbone_config['dropout']),
-            nn.Linear(1000, backbone_config['out_dim'])
+            nn.Linear(backbone_config['num_classes'], backbone_config['out_dim'])
         )
         
         self.transformer = TransformerLM(transformer_config)
