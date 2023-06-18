@@ -45,8 +45,8 @@ if __name__ == '__main__':
     dataset = ConcatDataset(data_list)
     
     train_set, val_set = random_split(dataset, [0.8, 0.2], generator=g)
-    train_loader = DataLoader(dataset=train_set, batch_size=2,)
-    val_loader = DataLoader(dataset=val_set, batch_size=2,)
+    train_loader = DataLoader(dataset=train_set, batch_size=1,)
+    val_loader = DataLoader(dataset=val_set, batch_size=1,)
 
     wandb_logger = WandbLogger(
         entity='gariscat',
