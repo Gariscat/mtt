@@ -4,7 +4,7 @@ from torch import nn, optim
 import torch.nn.functional as F
 from transformer import *
 import pytorch_lightning as pl
-from parse import MAX_LENGTH
+from parse import MAX_LENGTH, PITCH2ID
 
 
 class LeadModel(pl.LightningModule):
@@ -23,6 +23,11 @@ class LeadModel(pl.LightningModule):
         self.lr = lr
         self.image_size = backbone_config['image_size']
         self.loss_alpha = loss_alpha
+        """self.loss_weight = torch.Tensor([cnt for id, cnt in PITCH2ID.values()])
+        self.loss_weight = -1/torch.log(self.loss_weight)
+        print("\n\n", self.loss_weight, '\n\n')
+        self.loss_weight = torch.softmax(self.loss_weight, dim=0)
+        print("\n\n", self.loss_weight, '\n\n')"""
         
         if backbone_config['extractor_name'] == 'SimpleViT':
             self.extractor_backbone = SimpleViT(
@@ -36,7 +41,7 @@ class LeadModel(pl.LightningModule):
                 channels=6,  # 2*3
             )   
         else:
-            raise NotImplementedError(f"{backbone_config['extractor_name']} is not supported as backbone")
+            self.extractor_backbone = None
         """
         elif backbone_config['extractor_name'] == 'ResNet18':
             from torchvision.models import resnet18
@@ -48,19 +53,22 @@ class LeadModel(pl.LightningModule):
                 nn.Dropout(backbone_config['dropout']),
                 nn.Linear(backbone_config['num_classes'], backbone_config['out_dim'])
             )
-        else:
+        elif self.extractor_backbone is not None:
             self.extractor = nn.Sequential(
                 nn.Conv2d(6, 3, kernel_size=1),
                 self.extractor_backbone,
                 nn.Dropout(backbone_config['dropout']),
                 nn.Linear(backbone_config['num_classes'], backbone_config['out_dim'])
             )
+        else:
+            transformer_config.input_size = 6 * backbone_config['image_size'] * backbone_config['image_size'] // MAX_LENGTH
+            self.extractor = nn.Flatten(start_dim=1)
         
         self.transformer = TransformerLM(transformer_config)
         
     def forward(self, input_tensor):  # (B, C, H, W)
         seq_len = MAX_LENGTH
-        input_tensor = F.interpolate(input=input_tensor, size=(self.image_size, 32 * seq_len))
+        ### input_tensor = F.interpolate(input=input_tensor, size=(self.image_size, 32 * seq_len))
         B, C, H, W = input_tensor.size()
         W //= seq_len
         input_tensor = input_tensor.reshape(B, C, H, W, seq_len).permute(0, 4, 1, 2, 3).reshape(-1, C, H, W)
@@ -82,7 +90,8 @@ class LeadModel(pl.LightningModule):
         mel_tensor = torch.cat((mel_left_tensor, mel_right_tensor), dim=1)
 
         pitch_logits, value_estimates = self.forward(mel_tensor)
-        pitch_loss_func = nn.CrossEntropyLoss()
+        # self.loss_weight = self.loss_weight.to(pitch_gt.device)
+        pitch_loss_func = nn.CrossEntropyLoss(weight=None)
         value_loss_func = nn.MSELoss()
         
         pitch_logits = pitch_logits.reshape(-1, self.transformer.config.vocab_size)
@@ -99,10 +108,15 @@ class LeadModel(pl.LightningModule):
         mel_tensor = torch.cat((mel_left_tensor, mel_right_tensor), dim=1)
 
         pitch_logits, value_estimates = self.forward(mel_tensor)
-        pitch_loss_func = nn.CrossEntropyLoss()
+        # self.loss_weight = self.loss_weight.to(pitch_gt.device)
+        pitch_loss_func = nn.CrossEntropyLoss(weight=None)
         value_loss_func = nn.MSELoss()
         
-        # print(pitch_logits.size(), pitch_gt.size(), value_estimates.size(), value_gt.size())
+        pitch_pred = pitch_logits.argmax(-1)
+        for i in range(pitch_logits.shape[0]):
+            print('GT:', pitch_gt[i])
+            print('PD:', pitch_pred[i])
+        """"""
         
         pitch_logits = pitch_logits.reshape(-1, self.transformer.config.vocab_size)
         pitch_gt = pitch_gt.flatten()
@@ -110,4 +124,4 @@ class LeadModel(pl.LightningModule):
         value_gt = value_gt.flatten()
         
         loss = self.loss_alpha * pitch_loss_func(pitch_logits, pitch_gt) + (1 - self.loss_alpha) * value_loss_func(value_estimates, value_gt)
-        self.log('train_loss', loss)
+        self.log('val_loss', loss)

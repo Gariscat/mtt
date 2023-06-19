@@ -6,13 +6,15 @@ import os
 import matplotlib.pyplot as plt
 from bidict import bidict
 from tqdm import tqdm
+from sklearn.utils.class_weight import compute_class_weight
 
 DATA_PATH = 'data/'
 NUM_BARS = 8
-RESOLUTION = 1 / 16
+RESOLUTION = 1 / 16  # prog-house
 MAX_LENGTH = int(NUM_BARS/RESOLUTION)
 NOTE_VALUE_SCALE = 1.
-FILE_IDS = [str(i) for i in range(512)]
+TOT_TRACK = 512
+FILE_IDS = [str(i) for i in range(TOT_TRACK)]
 
 """
 pitch_count = {}
@@ -54,12 +56,14 @@ class LeadNoteDataset(Dataset):
             values = [0.] * MAX_LENGTH
                 
             for note_dict in note_dict_list:
+                if 'main' not in note_dict['generator']:
+                    continue
                 key_name = note_dict['key_name']
                 note_value = note_dict['note_value']
                 pos_in_pattern = note_dict['pos_in_pattern']
                     
                 i = int(pos_in_pattern/(RESOLUTION*4))  # assume 4/4
-                pitches[i] = PITCH2ID[key_name]
+                pitches[i] = PITCH2ID[key_name][0]
                 values[i] = note_value * NOTE_VALUE_SCALE
         
         return (
@@ -70,25 +74,31 @@ class LeadNoteDataset(Dataset):
         )
     
 
-PITCH2ID = bidict({'<r>': 0})  # the rest sign
+# PITCH2ID = bidict({'<r>': 0})  # the rest sign
+PITCH2ID = dict({'<r>': [0, TOT_TRACK * MAX_LENGTH]})
 
-for i in range(1024//64):
-    st, ed = i*64, (i+1)*64
-    FILE_IDS = list(range(st, ed))
-    processed_data = []
-    for file_id in tqdm(FILE_IDS, desc=f'scanning {st}-{ed}'):
-        json_path = f'track-{file_id}.json'            
-        with open(os.path.join(DATA_PATH, json_path), 'r') as f:
-            raw = json.load(f)
-            note_dict_list = raw['patterns'][0]['core']['notes']  # 0-lead, 1-chord, 2-bass, 3-sub
-                
-            for note_dict in note_dict_list:
-                key_name = note_dict['key_name']
-                note_value = note_dict['note_value']
-                pos_in_pattern = note_dict['pos_in_pattern']
+for file_id in tqdm(list(range(TOT_TRACK)), desc=f'scanning'):
+    json_path = f'track-{file_id}.json'            
+    with open(os.path.join(DATA_PATH, json_path), 'r') as f:
+        raw = json.load(f)
+        note_dict_list = raw['patterns'][0]['core']['notes']  # 0-lead, 1-chord, 2-bass, 3-sub
+        
+        note_cnt = 0
+        for note_dict in note_dict_list:
+            if 'main' not in note_dict['generator']:
+                continue
+            key_name = note_dict['key_name']
+            note_value = note_dict['note_value']
+            pos_in_pattern = note_dict['pos_in_pattern']
                     
-                if key_name not in PITCH2ID.keys():
-                    PITCH2ID[key_name] = len(PITCH2ID)
+            if key_name not in PITCH2ID.keys():
+                PITCH2ID[key_name] = [len(PITCH2ID), 1]
+            else:
+                PITCH2ID[key_name][1] += 1
+            
+            note_cnt += 1
+            
+        PITCH2ID['<r>'][1] -= note_cnt
         # torch.save(LeadNoteDataset(processed_data), os.path.join(DATA_PATH, f'processed-{st}-{ed}.pt'))
-                
-                
+
+print(PITCH2ID)
