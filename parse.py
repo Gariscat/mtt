@@ -76,7 +76,7 @@ for i in range(1024//64):
     st, ed = i*64, (i+1)*64
     FILE_IDS = list(range(st, ed))
     processed_data = []
-    for file_id in tqdm(FILE_IDS, desc=f'processing {st}-{ed}'):
+    for file_id in tqdm(FILE_IDS, desc=f'scanning {st}-{ed}'):
         json_path = f'track-{file_id}.json'            
         with open(os.path.join(DATA_PATH, json_path), 'r') as f:
             raw = json.load(f)
