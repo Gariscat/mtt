@@ -10,9 +10,9 @@ g.manual_seed(0)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--image_size', type=int, default=128)
-    parser.add_argument('--patch_size', type=int, default=2)
-    parser.add_argument('--num_classes', type=int, default=512)
+    parser.add_argument('--image_size', type=int, default=96)
+    parser.add_argument('--patch_size', type=int, default=1)
+    parser.add_argument('--num_classes', type=int, default=128)
     parser.add_argument('--dim', type=int, default=256)
     parser.add_argument('--depth', type=int, default=3)
     parser.add_argument('--heads', type=int, default=16)
@@ -56,7 +56,7 @@ if __name__ == '__main__':
         save_dir='./ckpt',
     )
     trainer = pl.Trainer(
-        accelerator="gpu",
+        accelerator="cpu",
         devices="auto",
         logger=wandb_logger,
         max_epochs=args.max_epochs,
