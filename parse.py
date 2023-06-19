@@ -61,9 +61,12 @@ class LeadNoteDataset(Dataset):
                 key_name = note_dict['key_name']
                 note_value = note_dict['note_value']
                 pos_in_pattern = note_dict['pos_in_pattern']
-                    
-                i = int(pos_in_pattern/(RESOLUTION*4))  # assume 4/4
-                pitches[i] = PITCH2ID[key_name][0]
+                # assume 4/4 signature
+                i = int(pos_in_pattern/(RESOLUTION*4))
+                j = i + int(note_value/RESOLUTION)
+                assert i < j <= MAX_LENGTH
+                for _ in range(i, j):
+                    pitches[_] = PITCH2ID[key_name][0]
                 values[i] = note_value * NOTE_VALUE_SCALE
         
         return (
