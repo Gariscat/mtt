@@ -59,7 +59,7 @@ class LeadModel(pl.LightningModule):
         self.transformer = TransformerLM(transformer_config)
         
     def forward(self, input_tensor):  # (B, C, H, W)
-        input_tensor = F.interpolate(input=input_tensor, size=(self.image_size, self.image_size * MAX_LENGTH))
+        input_tensor = F.interpolate(input=input_tensor, size=(self.image_size, 32 * MAX_LENGTH))
         B, C, H, W = input_tensor.size()
         N = W // H
         input_tensor = input_tensor.reshape(B, C, H, H, -1).permute(0, 4, 1, 2, 3).reshape(-1, C, H, H)
