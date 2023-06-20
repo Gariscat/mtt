@@ -16,21 +16,6 @@ NOTE_VALUE_SCALE = 1.
 TOT_TRACK = 512
 FILE_IDS = [str(i) for i in range(TOT_TRACK)]
 
-"""
-pitch_count = {}
-
-for id in FILE_IDS:
-    with open(os.path.join(DATA_PATH, f'track-{id}.json'), 'r') as f:
-        raw = json.load(f)
-        note_dict_list = raw['patterns'][0]['core']['notes']  # 0-lead, 1-chord, 2-bass, 3-sub
-
-        for note_dict in note_dict_list:
-            if note_dict['key_name'] not in pitch_count.keys():
-                pitch_count[note_dict['key_name']] = 1
-            else:
-                pitch_count[note_dict['key_name']] += 1
-print(len(pitch_count))
-"""
 
 class LeadNoteDataset(Dataset):
     def __init__(self, length=512) -> None:

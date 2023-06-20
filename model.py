@@ -2,26 +2,25 @@ from vit_pytorch import SimpleViT
 import torch
 from torch import nn, optim
 import torch.nn.functional as F
-from transformer import *
+from torch.nn import TransformerEncoderLayer, TransformerEncoder
 import pytorch_lightning as pl
 from parse import MAX_LENGTH, PITCH2ID
 
 class LeadModel(pl.LightningModule):
     def __init__(self,
         backbone_config: dict,
-        transformer_config: TransformerConfig = TransformerConfig(),
+        transformer_config: dict(),
         opt_name: str = 'Adam',
         lr: float = 1e-3,
         loss_alpha: float = 0.8,
+        is_causal: bool = True,
     ) -> None:
         super().__init__()
-        
-        assert backbone_config['out_dim'] == transformer_config.input_size
-        
         self.opt_name = opt_name
         self.lr = lr
         self.image_size = backbone_config['image_size']
         self.loss_alpha = loss_alpha
+        self.is_causal = is_causal
         """self.loss_weight = torch.Tensor([cnt for id, cnt in PITCH2ID.values()])
         self.loss_weight = -1/torch.log(self.loss_weight)
         print("\n\n", self.loss_weight, '\n\n')
@@ -32,7 +31,7 @@ class LeadModel(pl.LightningModule):
             self.extractor_backbone = SimpleViT(
                 image_size=backbone_config['image_size'],  # 128
                 patch_size=backbone_config['patch_size'],  # 4
-                num_classes=backbone_config['num_classes'],  # 512
+                num_classes=backbone_config['num_classes'],  # 1000
                 dim=backbone_config['dim'],  # 1024
                 depth=backbone_config['depth'],  # 6
                 heads=backbone_config['heads'],  # 16
@@ -60,10 +59,20 @@ class LeadModel(pl.LightningModule):
                 nn.Linear(backbone_config['num_classes'], backbone_config['out_dim'])
             )
         else:
-            transformer_config.input_size = 6 * backbone_config['image_size'] * backbone_config['image_size'] // MAX_LENGTH
-            self.extractor = nn.Flatten(start_dim=1)
+            flattened_dim = 6 * backbone_config['image_size'] * backbone_config['image_size'] // MAX_LENGTH
+            self.extractor = nn.Sequential(
+                nn.Flatten(start_dim=1),
+                nn.Linear(flattened_dim, backbone_config['out_dim'])
+            )
         
-        self.transformer = TransformerLM(transformer_config)
+        encoder_layer = TransformerEncoderLayer(
+            d_model=transformer_config['d_model'],
+            nhead=transformer_config['nhead'],
+            batch_first=True,
+        )
+        self.transformer = TransformerEncoder(encoder_layer, num_layers=transformer_config['num_layers'])
+        self.pitch_linear_layer = nn.Linear(transformer_config['d_model'], len(PITCH2ID))
+        self.value_linear_layer = nn.Linear(transformer_config['d_model'], 1)
         
     def forward(self, input_tensor):  # (B, C, H, W)
         seq_len = MAX_LENGTH
@@ -76,8 +85,9 @@ class LeadModel(pl.LightningModule):
         extracted = extracted.reshape(B, seq_len, -1)  # (B, M, O)
         """print(extracted.size())
         exit()"""
-        
-        pitch_logits, value_estimates, _ = self.transformer(extracted)
+        hidden_states = self.transformer(extracted, is_causal=self.is_causal)
+        pitch_logits = self.pitch_linear_layer(hidden_states)
+        value_estimates = self.value_linear_layer(hidden_states)
         return pitch_logits, value_estimates
     
     def configure_optimizers(self):
@@ -93,7 +103,7 @@ class LeadModel(pl.LightningModule):
         pitch_loss_func = nn.CrossEntropyLoss(weight=None)
         value_loss_func = nn.MSELoss()
         
-        pitch_logits = pitch_logits.reshape(-1, self.transformer.config.vocab_size)
+        pitch_logits = pitch_logits.reshape(-1, len(PITCH2ID))
         pitch_gt = pitch_gt.flatten()
         value_estimates = value_estimates.flatten()
         value_gt = value_gt.flatten()
@@ -118,7 +128,7 @@ class LeadModel(pl.LightningModule):
             print('PD:', pitch_pred[i])
         """"""
         
-        pitch_logits = pitch_logits.reshape(-1, self.transformer.config.vocab_size)
+        pitch_logits = pitch_logits.reshape(-1, len(PITCH2ID))
         pitch_gt = pitch_gt.flatten()
         value_estimates = value_estimates.flatten()
         value_gt = value_gt.flatten()

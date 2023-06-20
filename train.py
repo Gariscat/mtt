@@ -12,14 +12,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--image_size', type=int, default=256)
     parser.add_argument('--patch_size', type=int, default=2)
-    parser.add_argument('--num_classes', type=int, default=128)
+    parser.add_argument('--num_classes', type=int, default=1000)
     parser.add_argument('--dim', type=int, default=256)
     parser.add_argument('--depth', type=int, default=3)
     parser.add_argument('--heads', type=int, default=16)
     parser.add_argument('--mlp_dim', type=int, default=256)
     
     parser.add_argument('--dropout', type=float, default=0.2)
-    parser.add_argument('--out_dim', type=int, default=96)
+    parser.add_argument('--out_dim', type=int, default=512)
     parser.add_argument('--extractor_name', type=str, default=None)
     
     parser.add_argument('--max_epochs', type=int, default=20)
@@ -30,7 +30,11 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     backbone_config = vars(args)
-    transformer_config = TransformerConfig(input_size=args.out_dim, vocab_size=len(PITCH2ID))
+    transformer_config = {
+        'd_model': args.out_dim,
+        'nhead': 8,
+        'num_layers': 6,
+    }
     
     model = LeadModel(
         backbone_config=backbone_config,
@@ -54,8 +58,7 @@ if __name__ == '__main__':
         save_dir='./ckpt',
     )
     trainer = pl.Trainer(
-        accelerator="gpu",
-        devices="auto",
+        accelerator="gpu" if torch.cuda.is_available() else 'cpu',
         logger=wandb_logger,
         max_epochs=args.max_epochs,
         deterministic=True,
