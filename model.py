@@ -6,7 +6,6 @@ from transformer import *
 import pytorch_lightning as pl
 from parse import MAX_LENGTH, PITCH2ID
 
-
 class LeadModel(pl.LightningModule):
     def __init__(self,
         backbone_config: dict,
@@ -113,11 +112,11 @@ class LeadModel(pl.LightningModule):
         value_loss_func = nn.MSELoss()
         
         pitch_pred = pitch_logits.argmax(-1)
-        """
+        
         for i in range(pitch_logits.shape[0]):
             print('GT:', pitch_gt[i])
             print('PD:', pitch_pred[i])
-        """
+        """"""
         
         pitch_logits = pitch_logits.reshape(-1, self.transformer.config.vocab_size)
         pitch_gt = pitch_gt.flatten()
