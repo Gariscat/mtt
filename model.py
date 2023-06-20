@@ -72,7 +72,7 @@ class LeadModel(pl.LightningModule):
         )
         self.transformer = TransformerEncoder(encoder_layer, num_layers=transformer_config['num_layers'])
         self.pitch_linear_layer = nn.Linear(transformer_config['d_model'], len(PITCH2ID))
-        self.value_linear_layer = nn.Linear(transformer_config['d_model'], 1)
+        self.attack_linear_layer = nn.Linear(transformer_config['d_model'], 2)
         
     def forward(self, input_tensor):  # (B, C, H, W)
         seq_len = MAX_LENGTH
@@ -80,58 +80,67 @@ class LeadModel(pl.LightningModule):
         B, C, H, W = input_tensor.size()
         W //= seq_len
         input_tensor = input_tensor.reshape(B, C, H, W, seq_len).permute(0, 4, 1, 2, 3).reshape(-1, C, H, W)
-        # (B, C, H, W*M) -> (B, C, H, W, M) -> (B, M, C, H, W) -> (B*M, C, H, H)
+        # (B, C, H, W*M) -> (B, C, H, W, M) -> (B, M, C, H, W) -> (B*M, C, H, W)
         extracted = self.extractor(input_tensor)  # (B*M, O)
         extracted = extracted.reshape(B, seq_len, -1)  # (B, M, O)
         """print(extracted.size())
         exit()"""
         hidden_states = self.transformer(extracted, is_causal=self.is_causal)
         pitch_logits = self.pitch_linear_layer(hidden_states)
-        value_estimates = self.value_linear_layer(hidden_states)
-        return pitch_logits, value_estimates
+        attack_logits = self.attack_linear_layer(hidden_states)
+        return pitch_logits, attack_logits
     
     def configure_optimizers(self):
-        opt_cls = optim.Adam if self.opt_name == 'Adam' else optim.SGD
+        opt_cls = None
+        if self.opt_name == 'Adam':
+            opt_cls = optim.Adam
+        elif self.opt_name == 'AdamW':
+            opt_cls = optim.AdamW
+        else:
+            opt_cls = optim.SGD
         return opt_cls(self.parameters(), lr=self.lr)
     
     def training_step(self, train_batch, *args, **kwargs):
-        pitch_gt, value_gt, mel_left_tensor, mel_right_tensor = train_batch
+        pitch_gt, attack_gt, mel_left_tensor, mel_right_tensor = train_batch
         mel_tensor = torch.cat((mel_left_tensor, mel_right_tensor), dim=1)
 
-        pitch_logits, value_estimates = self.forward(mel_tensor)
+        pitch_logits, attack_logits = self.forward(mel_tensor)
         # self.loss_weight = self.loss_weight.to(pitch_gt.device)
         pitch_loss_func = nn.CrossEntropyLoss(weight=None)
-        value_loss_func = nn.MSELoss()
+        attack_loss_func = nn.CrossEntropyLoss(weight=None)
         
         pitch_logits = pitch_logits.reshape(-1, len(PITCH2ID))
         pitch_gt = pitch_gt.flatten()
-        value_estimates = value_estimates.flatten()
-        value_gt = value_gt.flatten()
+        attack_logits = attack_logits.reshape(-1, 2)
+        attack_gt = attack_gt.flatten()
         
-        loss = self.loss_alpha * pitch_loss_func(pitch_logits, pitch_gt) + (1 - self.loss_alpha) * value_loss_func(value_estimates, value_gt)
+        loss = self.loss_alpha * pitch_loss_func(pitch_logits, pitch_gt) + (1 - self.loss_alpha) * attack_loss_func(attack_logits, attack_gt)
         self.log('train_loss', loss)
         return loss
     
     def validation_step(self, val_batch, *args, **kwargs):
-        pitch_gt, value_gt, mel_left_tensor, mel_right_tensor = val_batch
+        pitch_gt, attack_gt, mel_left_tensor, mel_right_tensor = val_batch
         mel_tensor = torch.cat((mel_left_tensor, mel_right_tensor), dim=1)
 
-        pitch_logits, value_estimates = self.forward(mel_tensor)
+        pitch_logits, attack_logits = self.forward(mel_tensor)
         # self.loss_weight = self.loss_weight.to(pitch_gt.device)
         pitch_loss_func = nn.CrossEntropyLoss(weight=None)
-        value_loss_func = nn.MSELoss()
+        attack_loss_func = nn.CrossEntropyLoss(weight=None)
         
         pitch_pred = pitch_logits.argmax(-1)
+        attack_pred = attack_logits.argmax(-1)
         
         for i in range(pitch_logits.shape[0]):
-            print('GT:', pitch_gt[i])
-            print('PD:', pitch_pred[i])
+            print('Pitch-GT:', pitch_gt[i])
+            print('Pitch-PD:', pitch_pred[i])
+            print('Attack-GT:', attack_gt[i])
+            print('Attack-PD:', attack_pred[i])
         """"""
         
         pitch_logits = pitch_logits.reshape(-1, len(PITCH2ID))
         pitch_gt = pitch_gt.flatten()
-        value_estimates = value_estimates.flatten()
-        value_gt = value_gt.flatten()
+        attack_logits = attack_logits.reshape(-1, 2)
+        attack_gt = attack_gt.flatten()
         
-        loss = self.loss_alpha * pitch_loss_func(pitch_logits, pitch_gt) + (1 - self.loss_alpha) * value_loss_func(value_estimates, value_gt)
+        loss = self.loss_alpha * pitch_loss_func(pitch_logits, pitch_gt) + (1 - self.loss_alpha) * attack_loss_func(attack_logits, attack_gt)
         self.log('val_loss', loss)

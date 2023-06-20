@@ -38,7 +38,7 @@ class LeadNoteDataset(Dataset):
             note_dict_list = raw['patterns'][0]['core']['notes']  # 0-lead, 1-chord, 2-bass, 3-sub
             
             pitches = [0] * MAX_LENGTH
-            values = [0.] * MAX_LENGTH
+            attacks = [0] * MAX_LENGTH
                 
             for note_dict in note_dict_list:
                 if 'main' not in note_dict['generator']:
@@ -48,16 +48,16 @@ class LeadNoteDataset(Dataset):
                 pos_in_pattern = note_dict['pos_in_pattern']
                 # assume 4/4 signature
                 i = int(pos_in_pattern/(RESOLUTION*4))
-                """j = i + int(note_value/RESOLUTION)
+                j = i + int(note_value/RESOLUTION)
                 assert i < j <= MAX_LENGTH
                 for _ in range(i, j):
-                    pitches[_] = PITCH2ID[key_name][0]"""
-                pitches[i] = PITCH2ID[key_name][0]
-                values[i] = note_value * NOTE_VALUE_SCALE
+                    pitches[_] = PITCH2ID[key_name][0]
+                """pitches[i] = PITCH2ID[key_name][0]"""
+                attacks[i] = 1
         
         return (
             torch.LongTensor(pitches),
-            torch.Tensor(values),
+            torch.LongTensor(attacks),
             mel_left_tensor,
             mel_right_tensor,
         )
