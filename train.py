@@ -24,7 +24,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--max_epochs', type=int, default=20)
     parser.add_argument('--opt_name', type=str, default='SGD')
-    parser.add_argument('--lr', type=float, default=1e-5)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--loss_alpha', type=float, default=0.5)
     parser.add_argument('--comment', type=str, default=None)
     

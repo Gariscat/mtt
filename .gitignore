@@ -164,3 +164,4 @@ data/
 wandb/
 ckpt/
 log/
+tmp/

@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from bidict import bidict
 from tqdm import tqdm
 from sklearn.utils.class_weight import compute_class_weight
+from torchvision.transforms.functional import rgb_to_grayscale
+import matplotlib.pyplot as plt
 
 DATA_PATH = 'data/'
 NUM_BARS = 8
@@ -16,7 +18,21 @@ NOTE_VALUE_SCALE = 1.
 TOT_TRACK = 512
 FILE_IDS = [str(i) for i in range(TOT_TRACK)]
 
-
+"""
+def transform(a: torch.Tensor):
+    assert len(a.shape) == 3
+    stride = a.shape[-1] // MAX_LENGTH
+    C, H, W = a.shape
+    ret = torch.cat((
+        torch.cat((torch.zeros(C, H, stride), a[:, :, :-stride]), dim=-1),
+        a,
+        torch.cat((a[:, :, stride:], torch.zeros(C, H, stride)), dim=-1)
+    ), dim=0)
+    C_new, H_new, W_new = ret.shape
+    assert C_new == 3 * C and H_new == H and W_new == W
+    return ret
+"""    
+    
 class LeadNoteDataset(Dataset):
     def __init__(self, length=512) -> None:
         super().__init__()
@@ -29,10 +45,17 @@ class LeadNoteDataset(Dataset):
         json_path = f'track-{index}.json'
         mel_path_left = f'{index}_left.jpg'
         mel_path_right = f'{index}_right.jpg'
-        
+        # read
         mel_left_tensor = read_image(os.path.join(DATA_PATH, mel_path_left)).float() / 255
         mel_right_tensor = read_image(os.path.join(DATA_PATH, mel_path_right)).float() / 255
-        
+        """
+        # rgb-to-grayscale
+        mel_left_tensor = rgb_to_grayscale(mel_left_tensor)
+        mel_right_tensor = rgb_to_grayscale(mel_right_tensor)
+        # include-3-frames-in-1-token
+        mel_left_tensor = transform(mel_left_tensor)
+        mel_right_tensor = transform(mel_right_tensor)
+        """
         with open(os.path.join(DATA_PATH, json_path), 'r') as f:
             raw = json.load(f)
             note_dict_list = raw['patterns'][0]['core']['notes']  # 0-lead, 1-chord, 2-bass, 3-sub
@@ -90,4 +113,7 @@ for file_id in tqdm(list(range(TOT_TRACK)), desc=f'scanning'):
         PITCH2ID['<r>'][1] -= note_cnt
         # torch.save(LeadNoteDataset(processed_data), os.path.join(DATA_PATH, f'processed-{st}-{ed}.pt'))
 
+ID2PITCH = dict()
+for pitch, (id, cnt) in PITCH2ID.items():
+    ID2PITCH[id] = pitch
 print(PITCH2ID)

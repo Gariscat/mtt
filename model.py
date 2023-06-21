@@ -2,9 +2,12 @@ from vit_pytorch import SimpleViT
 import torch
 from torch import nn, optim
 import torch.nn.functional as F
+from torchvision.utils import save_image
 from torch.nn import TransformerEncoderLayer, TransformerEncoder
 import pytorch_lightning as pl
-from parse import MAX_LENGTH, PITCH2ID
+from parse import MAX_LENGTH, PITCH2ID, ID2PITCH
+import os, shutil
+import numpy as np
 
 class LeadModel(pl.LightningModule):
     def __init__(self,
@@ -16,6 +19,9 @@ class LeadModel(pl.LightningModule):
         is_causal: bool = True,
     ) -> None:
         super().__init__()
+        
+        shutil.rmtree('tmp')
+        
         self.opt_name = opt_name
         self.lr = lr
         self.image_size = backbone_config['image_size']
@@ -83,8 +89,7 @@ class LeadModel(pl.LightningModule):
         # (B, C, H, W*M) -> (B, C, H, W, M) -> (B, M, C, H, W) -> (B*M, C, H, W)
         extracted = self.extractor(input_tensor)  # (B*M, O)
         extracted = extracted.reshape(B, seq_len, -1)  # (B, M, O)
-        """print(extracted.size())
-        exit()"""
+        
         hidden_states = self.transformer(extracted, is_causal=self.is_causal)
         pitch_logits = self.pitch_linear_layer(hidden_states)
         attack_logits = self.attack_linear_layer(hidden_states)
@@ -114,14 +119,30 @@ class LeadModel(pl.LightningModule):
         attack_logits = attack_logits.reshape(-1, 2)
         attack_gt = attack_gt.flatten()
         
-        loss = self.loss_alpha * pitch_loss_func(pitch_logits, pitch_gt) + (1 - self.loss_alpha) * attack_loss_func(attack_logits, attack_gt)
+        pitch_loss = pitch_loss_func(pitch_logits, pitch_gt)
+        attack_loss = attack_loss_func(attack_logits, attack_gt)
+        loss = self.loss_alpha * pitch_loss + (1 - self.loss_alpha) * attack_loss
+        self.log('train_loss_pitch', pitch_loss)
+        self.log('train_loss_attack', attack_loss)
         self.log('train_loss', loss)
         return loss
     
     def validation_step(self, val_batch, *args, **kwargs):
         pitch_gt, attack_gt, mel_left_tensor, mel_right_tensor = val_batch
         mel_tensor = torch.cat((mel_left_tensor, mel_right_tensor), dim=1)
-
+        """
+        os.makedirs('tmp', exist_ok=True)
+        cnt = [0] * len(PITCH2ID)
+        stride = mel_left_tensor.shape[-1] // MAX_LENGTH
+        for j in range(MAX_LENGTH):
+            pitch_id = pitch_gt[0][j].item()
+            mel_left_cur = mel_left_tensor[:, :, :, j*stride:(j+1)*stride].cpu()
+            # print(mel_left_cur.shape)
+            mel_left_cur = F.interpolate(mel_left_cur, (256, 64))[0]
+            mel_left_cur = torch.cat([mel_left_cur[i] for i in range(mel_left_cur.shape[0])], dim=-1)
+            save_image(mel_left_cur, f'tmp/{ID2PITCH[pitch_id]}-{cnt[pitch_id]}.jpg')
+            cnt[pitch_id] += 1
+        """
         pitch_logits, attack_logits = self.forward(mel_tensor)
         # self.loss_weight = self.loss_weight.to(pitch_gt.device)
         pitch_loss_func = nn.CrossEntropyLoss(weight=None)
@@ -142,5 +163,9 @@ class LeadModel(pl.LightningModule):
         attack_logits = attack_logits.reshape(-1, 2)
         attack_gt = attack_gt.flatten()
         
-        loss = self.loss_alpha * pitch_loss_func(pitch_logits, pitch_gt) + (1 - self.loss_alpha) * attack_loss_func(attack_logits, attack_gt)
+        pitch_loss = pitch_loss_func(pitch_logits, pitch_gt)
+        attack_loss = attack_loss_func(attack_logits, attack_gt)
+        loss = self.loss_alpha * pitch_loss + (1 - self.loss_alpha) * attack_loss
+        self.log('val_loss_pitch', pitch_loss)
+        self.log('val_loss_attack', attack_loss)
         self.log('val_loss', loss)
