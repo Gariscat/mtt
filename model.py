@@ -20,7 +20,8 @@ class LeadModel(pl.LightningModule):
     ) -> None:
         super().__init__()
         
-        shutil.rmtree('tmp')
+        if 'tmp' in os.listdir():
+            shutil.rmtree('tmp')
         
         self.opt_name = opt_name
         self.lr = lr

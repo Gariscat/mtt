@@ -34,7 +34,7 @@ def transform(a: torch.Tensor):
 """    
     
 class LeadNoteDataset(Dataset):
-    def __init__(self, length=512) -> None:
+    def __init__(self, length=TOT_TRACK) -> None:
         super().__init__()
         self._length = length
     
