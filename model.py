@@ -1,8 +1,9 @@
-from vit_pytorch import SimpleViT
+from vit_pytorch import SimpleViT, ViT
 import torch
 from torch import nn, optim
 import torch.nn.functional as F
 from torchvision.utils import save_image
+from torchvision.models import resnet18
 from torch.nn import TransformerEncoderLayer, TransformerEncoder
 import pytorch_lightning as pl
 from parse import MAX_LENGTH, PITCH2ID, ID2PITCH
@@ -33,9 +34,14 @@ class LeadModel(pl.LightningModule):
         print("\n\n", self.loss_weight, '\n\n')
         self.loss_weight = torch.softmax(self.loss_weight, dim=0)
         print("\n\n", self.loss_weight, '\n\n')"""
-        
-        if backbone_config['extractor_name'] == 'SimpleViT':
-            self.extractor_backbone = SimpleViT(
+        ext_name = backbone_config['extractor_name']
+        if 'ViT' in ext_name:
+            vit_cls = None
+            if ext_name == 'SimpleViT':
+                vit_cls = SimpleViT
+            elif ext_name == 'ViT':
+                vit_cls = ViT
+            self.extractor_backbone = vit_cls(
                 image_size=backbone_config['image_size'],  # 128
                 patch_size=backbone_config['patch_size'],  # 4
                 num_classes=backbone_config['num_classes'],  # 1000
@@ -45,10 +51,10 @@ class LeadModel(pl.LightningModule):
                 mlp_dim=backbone_config['mlp_dim'],  # 2048
                 channels=6,  # 2*3
             )   
-        else:
-            self.extractor_backbone = None
+        elif ext_name == 'ResNet18':
+            self.extractor_backbone = resnet18(weights='IMAGENET1K_V1')
         """
-        elif backbone_config['extractor_name'] == 'ResNet18':
+        elif ext_name == 'ResNet18':
             from torchvision.models import resnet18
             self.extractor_backbone = resnet18(weights=backbone_config['weights'])  # IMAGENET1K_V1
         """
