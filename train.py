@@ -21,6 +21,7 @@ if __name__ == '__main__':
     parser.add_argument('--dropout', type=float, default=0.2)
     parser.add_argument('--out_dim', type=int, default=512)
     parser.add_argument('--extractor_name', type=str, default=None)
+    parser.add_argument('--hidden_size', type=int, default=None)
     
     parser.add_argument('--max_epochs', type=int, default=100)
     parser.add_argument('--opt_name', type=str, default='SGD')

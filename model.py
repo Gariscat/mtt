@@ -72,13 +72,23 @@ class LeadModel(pl.LightningModule):
                 nn.Dropout(backbone_config['dropout']),
                 nn.Linear(backbone_config['num_classes'], backbone_config['out_dim'])
             )
-        else:
+        elif backbone_config['hidden_size'] is not None:
+            flattened_dim = 6 * backbone_config['image_size'] * backbone_config['image_size'] // MAX_LENGTH
+            hidden_size = backbone_config['hidden_size']
+            self.extractor = nn.Sequential(
+                nn.Flatten(start_dim=1),
+                nn.Linear(flattened_dim, hidden_size),
+                nn.ReLU(),
+                nn.Linear(hidden_size, backbone_config['out_dim'])
+            )
+            
+        else:  # None
             flattened_dim = 6 * backbone_config['image_size'] * backbone_config['image_size'] // MAX_LENGTH
             self.extractor = nn.Sequential(
                 nn.Flatten(start_dim=1),
                 nn.Linear(flattened_dim, backbone_config['out_dim'])
             )
-        
+                    
         encoder_layer = TransformerEncoderLayer(
             d_model=transformer_config['d_model'],
             nhead=transformer_config['nhead'],
