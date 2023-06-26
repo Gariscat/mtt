@@ -3,7 +3,7 @@ import subprocess
 
 OPT_NAMES = ('SGD',)
 LEARNING_RATES = (1e-4, )
-EXTRACTOR_NAMES = ('ResNet18', 'SimpleViT', 'ViT', None, )
+EXTRACTOR_NAMES = (None, )
 # SIZES = ([512, 512], [256, 256],)
 
 

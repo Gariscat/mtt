@@ -35,6 +35,7 @@ class LeadModel(pl.LightningModule):
         self.loss_weight = torch.softmax(self.loss_weight, dim=0)
         print("\n\n", self.loss_weight, '\n\n')"""
         ext_name = backbone_config['extractor_name']
+        self.extractor_backbone = None
         if 'ViT' in ext_name:
             vit_cls = None
             if ext_name == 'SimpleViT':
