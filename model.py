@@ -226,3 +226,4 @@ class LeadModel(pl.LightningModule):
         buf.seek(0)
         img = Image.open(buf)
         self.logger.log_image(key="samples", images=[img,])
+        plt.close()
