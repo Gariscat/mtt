@@ -15,7 +15,7 @@ NUM_BARS = 8
 RESOLUTION = 1 / 16  # prog-house
 MAX_LENGTH = int(NUM_BARS/RESOLUTION)
 NOTE_VALUE_SCALE = 1.
-TOT_TRACK = 512
+TOT_TRACK = 1024
 FILE_IDS = [str(i) for i in range(TOT_TRACK)]
 
 """
@@ -88,6 +88,7 @@ class LeadNoteDataset(Dataset):
 
 # PITCH2ID = bidict({'<r>': 0})  # the rest sign
 PITCH2ID = dict({'<r>': [0, TOT_TRACK * MAX_LENGTH]})
+ATTACK_CNT = [TOT_TRACK * MAX_LENGTH, 0]
 
 for file_id in tqdm(list(range(TOT_TRACK)), desc=f'scanning'):
     json_path = f'track-{file_id}.json'            
@@ -95,22 +96,23 @@ for file_id in tqdm(list(range(TOT_TRACK)), desc=f'scanning'):
         raw = json.load(f)
         note_dict_list = raw['patterns'][0]['core']['notes']  # 0-lead, 1-chord, 2-bass, 3-sub
         
-        note_cnt = 0
         for note_dict in note_dict_list:
             if 'main' not in note_dict['generator']:
                 continue
             key_name = note_dict['key_name']
             note_value = note_dict['note_value']
             pos_in_pattern = note_dict['pos_in_pattern']
+            
+            cur_cnt = note_value // RESOLUTION
                     
             if key_name not in PITCH2ID.keys():
-                PITCH2ID[key_name] = [len(PITCH2ID), 1]
+                PITCH2ID[key_name] = [len(PITCH2ID), cur_cnt]
             else:
-                PITCH2ID[key_name][1] += 1
+                PITCH2ID[key_name][1] += cur_cnt
             
-            note_cnt += 1
-            
-        PITCH2ID['<r>'][1] -= note_cnt
+            PITCH2ID['<r>'][1] -= cur_cnt
+            ATTACK_CNT[0] -= 1
+            ATTACK_CNT[1] += 1
         # torch.save(LeadNoteDataset(processed_data), os.path.join(DATA_PATH, f'processed-{st}-{ed}.pt'))
 
 ID2PITCH = dict()

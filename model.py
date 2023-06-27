@@ -6,9 +6,17 @@ from torchvision.utils import save_image
 from torchvision.models import resnet18
 from torch.nn import TransformerEncoderLayer, TransformerEncoder
 import pytorch_lightning as pl
-from parse import MAX_LENGTH, PITCH2ID, ID2PITCH
-import os, shutil
+from parse import MAX_LENGTH, PITCH2ID, ID2PITCH, ATTACK_CNT
+import os, shutil, io
 import numpy as np
+import loopy
+from loopy.utils import midi_id2piano_key, piano_key2midi_id
+from typing import List
+import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
+from PIL import Image
+import wandb
 
 class LeadModel(pl.LightningModule):
     def __init__(self,
@@ -29,12 +37,11 @@ class LeadModel(pl.LightningModule):
         self.image_size = backbone_config['image_size']
         self.loss_alpha = loss_alpha
         self.is_causal = is_causal
-        """self.loss_weight = torch.Tensor([cnt for id, cnt in PITCH2ID.values()])
-        self.loss_weight = -1/torch.log(self.loss_weight)
-        print("\n\n", self.loss_weight, '\n\n')
-        self.loss_weight = torch.softmax(self.loss_weight, dim=0)
-        print("\n\n", self.loss_weight, '\n\n')"""
-        ext_name = backbone_config['extractor_name']
+        self.pitch_loss_w = 1 / torch.Tensor([cnt for id, cnt in PITCH2ID.values()])
+        print("\n\npitch loss weight:", self.pitch_loss_w, '\n\n')
+        self.attack_loss_w = 1 / torch.Tensor(ATTACK_CNT)
+        print("\n\nattack loss weight:", self.attack_loss_w, '\n\n')
+        ext_name = str(backbone_config['extractor_name'])
         self.extractor_backbone = None
         if 'ViT' in ext_name:
             vit_cls = None
@@ -128,9 +135,10 @@ class LeadModel(pl.LightningModule):
         mel_tensor = torch.cat((mel_left_tensor, mel_right_tensor), dim=1)
 
         pitch_logits, attack_logits = self.forward(mel_tensor)
-        # self.loss_weight = self.loss_weight.to(pitch_gt.device)
-        pitch_loss_func = nn.CrossEntropyLoss(weight=None)
-        attack_loss_func = nn.CrossEntropyLoss(weight=None)
+        self.pitch_loss_w = self.pitch_loss_w.to(pitch_gt.device)
+        self.attack_loss_w = self.attack_loss_w.to(attack_gt.device)
+        pitch_loss_func = nn.CrossEntropyLoss(weight=self.pitch_loss_w)
+        attack_loss_func = nn.CrossEntropyLoss(weight=self.attack_loss_w)
         
         pitch_logits = pitch_logits.reshape(-1, len(PITCH2ID))
         pitch_gt = pitch_gt.flatten()
@@ -162,19 +170,22 @@ class LeadModel(pl.LightningModule):
             cnt[pitch_id] += 1
         """
         pitch_logits, attack_logits = self.forward(mel_tensor)
-        # self.loss_weight = self.loss_weight.to(pitch_gt.device)
-        pitch_loss_func = nn.CrossEntropyLoss(weight=None)
-        attack_loss_func = nn.CrossEntropyLoss(weight=None)
+        self.pitch_loss_w = self.pitch_loss_w.to(pitch_gt.device)
+        self.attack_loss_w = self.attack_loss_w.to(attack_gt.device)
+        pitch_loss_func = nn.CrossEntropyLoss(weight=self.pitch_loss_w)
+        attack_loss_func = nn.CrossEntropyLoss(weight=self.attack_loss_w)
         
         pitch_pred = pitch_logits.argmax(-1)
         attack_pred = attack_logits.argmax(-1)
         
         for i in range(pitch_logits.shape[0]):
+            self.visualize_results(pitch_gt[i], pitch_pred[i])
+            """    
             print('Pitch-GT:', pitch_gt[i])
             print('Pitch-PD:', pitch_pred[i])
             print('Attack-GT:', attack_gt[i])
             print('Attack-PD:', attack_pred[i])
-        """"""
+            """
         
         pitch_logits = pitch_logits.reshape(-1, len(PITCH2ID))
         pitch_gt = pitch_gt.flatten()
@@ -187,3 +198,31 @@ class LeadModel(pl.LightningModule):
         self.log('val_loss_pitch', pitch_loss)
         self.log('val_loss_attack', attack_loss)
         self.log('val_loss', loss)
+
+    def visualize_results(self, gt, pred):
+        def plot(lst: List[int], ax: matplotlib.axes.Axes, title: str=None):
+            segments = []
+            for i, v in enumerate(lst):
+                if ID2PITCH[v] == '<r>':
+                    continue
+                pitch = piano_key2midi_id(ID2PITCH[v])
+                segments += [((i, pitch), (i+1, pitch))]
+            ax.add_collection(LineCollection(segments))
+            ax.autoscale()
+            m = ax.get_yticks().tolist()
+            for i in range(len(m)):
+                m[i] = midi_id2piano_key(int(m[i]))
+            ax.set_yticklabels(m)
+            ax.set_title(title)
+                
+        fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True)
+        gt = gt.detach().cpu().numpy().tolist()
+        pred = pred.detach().cpu().numpy().tolist()
+        plot(gt, axes[0], 'ground truth')
+        plot(pred, axes[1], 'prediction')
+
+        buf = io.BytesIO()
+        fig.savefig(buf)
+        buf.seek(0)
+        img = Image.open(buf)
+        self.logger.log_image(key="samples", images=[img,])

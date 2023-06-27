@@ -25,9 +25,10 @@ if __name__ == '__main__':
     
     parser.add_argument('--max_epochs', type=int, default=100)
     parser.add_argument('--opt_name', type=str, default='SGD')
-    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--lr', type=float, default=2e-4)
     parser.add_argument('--loss_alpha', type=float, default=0.5)
     parser.add_argument('--comment', type=str, default=None)
+    parser.add_argument('--debug', type=bool, default=False)
     
     args = parser.parse_args()
     backbone_config = vars(args)
@@ -51,16 +52,16 @@ if __name__ == '__main__':
     train_loader = DataLoader(dataset=train_set, batch_size=2,)
     val_loader = DataLoader(dataset=val_set, batch_size=2,)
 
-    wandb_logger = WandbLogger(
+    logger = WandbLogger(
         entity='gariscat',
         project='MTTLead',
         config=backbone_config,
         log_model=True,
         save_dir='./ckpt',
-    )
+    ) if not args.debug else None
     trainer = pl.Trainer(
         accelerator="gpu" if torch.cuda.is_available() else 'cpu',
-        logger=wandb_logger,
+        logger=logger,
         max_epochs=args.max_epochs,
         deterministic=True,
         default_root_dir='./ckpt',
