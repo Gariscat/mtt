@@ -23,10 +23,11 @@ if __name__ == '__main__':
     parser.add_argument('--extractor_name', type=str, default=None)
     parser.add_argument('--hidden_size', type=int, default=None)
     
-    parser.add_argument('--max_epochs', type=int, default=100)
+    parser.add_argument('--max_epochs', type=int, default=200)
     parser.add_argument('--opt_name', type=str, default='SGD')
     parser.add_argument('--lr', type=float, default=2e-4)
     parser.add_argument('--loss_alpha', type=float, default=0.5)
+    parser.add_argument('--is_causal', type=bool, default=True)
     parser.add_argument('--comment', type=str, default=None)
     parser.add_argument('--debug', type=bool, default=False)
     
@@ -43,7 +44,8 @@ if __name__ == '__main__':
         transformer_config=transformer_config,
         opt_name=args.opt_name,
         lr=args.lr,
-        loss_alpha=args.loss_alpha
+        loss_alpha=args.loss_alpha,
+        is_causal=args.is_causal
     )
     
     dataset = LeadNoteDataset(length=256)
