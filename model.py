@@ -131,7 +131,7 @@ class LeadModel(pl.LightningModule):
         return opt_cls(self.parameters(), lr=self.lr)
     
     def training_step(self, train_batch, *args, **kwargs):
-        pitch_gt, attack_gt, mel_left_tensor, mel_right_tensor = train_batch
+        pitch_gt, attack_gt, mel_left_tensor, mel_right_tensor, json_path = train_batch
         mel_tensor = torch.cat((mel_left_tensor, mel_right_tensor), dim=1)
 
         pitch_logits, attack_logits = self.forward(mel_tensor)
@@ -154,21 +154,32 @@ class LeadModel(pl.LightningModule):
         return loss
     
     def validation_step(self, val_batch, *args, **kwargs):
-        pitch_gt, attack_gt, mel_left_tensor, mel_right_tensor = val_batch
+        pitch_gt, attack_gt, mel_left_tensor, mel_right_tensor, json_path = val_batch
         mel_tensor = torch.cat((mel_left_tensor, mel_right_tensor), dim=1)
-        """
+        
         os.makedirs('tmp', exist_ok=True)
         cnt = [0] * len(PITCH2ID)
         stride = mel_left_tensor.shape[-1] // MAX_LENGTH
+        
+        plt.imshow(mel_left_tensor[0].permute(1, 2, 0).numpy())
+        plt.savefig('tmp.jpg')
+        plt.close()
+        print(json_path)
+        
         for j in range(MAX_LENGTH):
             pitch_id = pitch_gt[0][j].item()
-            mel_left_cur = mel_left_tensor[:, :, :, j*stride:(j+1)*stride].cpu()
-            # print(mel_left_cur.shape)
-            mel_left_cur = F.interpolate(mel_left_cur, (256, 64))[0]
-            mel_left_cur = torch.cat([mel_left_cur[i] for i in range(mel_left_cur.shape[0])], dim=-1)
-            save_image(mel_left_cur, f'tmp/{ID2PITCH[pitch_id]}-{cnt[pitch_id]}.jpg')
+            mel_left_cur = mel_left_tensor[0, :, :, j*stride:(j+1)*stride].cpu()
+        
+            # mel_left_cur = F.interpolate(mel_left_cur, (512, 4))
+            # mel_left_cur = torch.cat([mel_left_cur[i] for i in range(mel_left_cur.shape[0])], dim=-1)
+            # save_image(mel_left_cur, f'tmp/{ID2PITCH[pitch_id]}-{cnt[pitch_id]}.jpg')
+            save_image(mel_left_cur, f'tmp/{j}-{ID2PITCH[pitch_id]}.jpg')
             cnt[pitch_id] += 1
-        """
+        """"""
+        tmp = pitch_gt[0].cpu().numpy().tolist()
+        print([ID2PITCH[_] for _ in tmp])
+        
+        
         pitch_logits, attack_logits = self.forward(mel_tensor)
         self.pitch_loss_w = self.pitch_loss_w.to(pitch_gt.device)
         self.attack_loss_w = self.attack_loss_w.to(attack_gt.device)

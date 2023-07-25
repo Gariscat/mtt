@@ -10,7 +10,7 @@ g.manual_seed(0)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--image_size', type=int, default=256)
+    parser.add_argument('--image_size', type=int, default=512)
     parser.add_argument('--patch_size', type=int, default=2)
     parser.add_argument('--num_classes', type=int, default=1000)
     parser.add_argument('--dim', type=int, default=256)
@@ -27,7 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('--opt_name', type=str, default='SGD')
     parser.add_argument('--lr', type=float, default=2e-4)
     parser.add_argument('--loss_alpha', type=float, default=0.5)
-    parser.add_argument('--is_causal', type=bool, default=True)
+    parser.add_argument('--is_causal', type=bool, default=False)
     parser.add_argument('--comment', type=str, default=None)
     parser.add_argument('--debug', type=bool, default=False)
     
@@ -68,5 +68,5 @@ if __name__ == '__main__':
         deterministic=True,
         default_root_dir='./ckpt',
     )
-    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
-    
+    # trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+    model.validation_step(next(iter(val_loader)))

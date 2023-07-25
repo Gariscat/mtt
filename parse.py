@@ -10,7 +10,7 @@ from sklearn.utils.class_weight import compute_class_weight
 from torchvision.transforms.functional import rgb_to_grayscale
 import matplotlib.pyplot as plt
 
-DATA_PATH = 'data/'
+DATA_PATH = 'data'
 NUM_BARS = 8
 RESOLUTION = 1 / 16  # prog-house
 MAX_LENGTH = int(NUM_BARS/RESOLUTION)
@@ -83,6 +83,7 @@ class LeadNoteDataset(Dataset):
             torch.LongTensor(attacks),
             mel_left_tensor,
             mel_right_tensor,
+            json_path
         )
     
 
