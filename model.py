@@ -20,7 +20,7 @@ import wandb
 
 class LeadModel(pl.LightningModule):
     def __init__(self,
-        backbone_config: dict,
+        config: dict,
         opt_name: str = 'Adam',
         lr: float = 1e-3,
         loss_alpha: float = 0.8,
@@ -33,15 +33,15 @@ class LeadModel(pl.LightningModule):
         
         self.opt_name = opt_name
         self.lr = lr
-        self.image_size = backbone_config['image_size']
+        self.image_size = config['image_size']
         self.loss_alpha = loss_alpha
         self.is_causal = is_causal
-        self.use_rnn = backbone_config['use_rnn']
+        self.rnn_type = config['rnn_type']
         self.pitch_loss_w = 1 / torch.Tensor([cnt for id, cnt in PITCH2ID.values()])
         # print("\n\npitch loss weight:", self.pitch_loss_w, '\n\n')
         self.attack_loss_w = 1 / torch.Tensor(ATTACK_CNT)
         # print("\n\nattack loss weight:", self.attack_loss_w, '\n\n')
-        ext_name = str(backbone_config['extractor_name'])
+        ext_name = str(config['extractor_name'])
         self.extractor_backbone = None
         
         if 'ViT' in ext_name:
@@ -51,13 +51,13 @@ class LeadModel(pl.LightningModule):
             elif ext_name == 'ViT':
                 vit_cls = ViT
             self.extractor_backbone = vit_cls(
-                image_size=backbone_config['image_size'],  # 128
-                patch_size=backbone_config['patch_size'],  # 4
-                num_classes=backbone_config['num_classes'],  # 1000
-                dim=backbone_config['dim'],  # 1024
-                depth=backbone_config['depth'],  # 6
-                heads=backbone_config['heads'],  # 16
-                mlp_dim=backbone_config['mlp_dim'],  # 2048
+                image_size=config['image_size'],  # 128
+                patch_size=config['patch_size'],  # 4
+                num_classes=config['num_classes'],  # 1000
+                dim=config['dim'],  # 1024
+                depth=config['depth'],  # 6
+                heads=config['heads'],  # 16
+                mlp_dim=config['mlp_dim'],  # 2048
                 channels=6,  # 2*3
             )   
         elif ext_name == 'ResNet18':
@@ -65,62 +65,62 @@ class LeadModel(pl.LightningModule):
         """
         elif ext_name == 'ResNet18':
             from torchvision.models import resnet18
-            self.extractor_backbone = resnet18(weights=backbone_config['weights'])  # IMAGENET1K_V1
+            self.extractor_backbone = resnet18(weights=config['weights'])  # IMAGENET1K_V1
         """
         if 'vit' in str(type(self.extractor_backbone)):
             self.extractor = nn.Sequential(
                 self.extractor_backbone,
-                nn.Dropout(backbone_config['dropout']),
-                nn.Linear(backbone_config['num_classes'], backbone_config['out_dim'])
+                nn.Dropout(config['dropout']),
+                nn.Linear(config['num_classes'], config['out_dim'])
             )
         elif self.extractor_backbone is not None:
             self.extractor = nn.Sequential(
                 nn.Conv2d(6, 3, kernel_size=1),
                 self.extractor_backbone,
-                nn.Dropout(backbone_config['dropout']),
-                nn.Linear(backbone_config['num_classes'], backbone_config['out_dim'])
+                nn.Dropout(config['dropout']),
+                nn.Linear(config['num_classes'], config['out_dim'])
             )
-        elif backbone_config['hidden_size'] is not None:
-            flattened_dim = 6 * backbone_config['image_size'] * backbone_config['image_size'] // MAX_LENGTH
-            hidden_size = backbone_config['hidden_size']
+        elif config['hidden_size'] is not None:
+            flattened_dim = 6 * config['image_size'] * config['image_size'] // MAX_LENGTH
+            hidden_size = config['hidden_size']
             self.extractor = nn.Sequential(
                 nn.Flatten(start_dim=1),
                 nn.Linear(flattened_dim, hidden_size),
                 nn.ReLU(),
-                nn.Linear(hidden_size, backbone_config['out_dim'])
+                nn.Linear(hidden_size, config['out_dim'])
             )
         else:  # None
-            flattened_dim = 6 * backbone_config['image_size'] * backbone_config['image_size'] // MAX_LENGTH
+            flattened_dim = 6 * config['image_size'] * config['image_size'] // MAX_LENGTH
             self.extractor = nn.Sequential(
                 nn.Flatten(start_dim=1),
-                nn.Linear(flattened_dim, backbone_config['out_dim'])
+                nn.Linear(flattened_dim, config['out_dim'])
             )
         
-        if backbone_config['use_rnn'] is False:
+        if config['rnn_type'] is None:
             encoder_layer = TransformerEncoderLayer(
-                d_model=backbone_config['out_dim'],
-                nhead=backbone_config['nhead'],
+                d_model=config['out_dim'],
+                nhead=config['nhead'],
                 batch_first=True,
             )
-            self.main_model = TransformerEncoder(encoder_layer, num_layers=backbone_config['num_layers'])
+            self.main_model = TransformerEncoder(encoder_layer, num_layers=config['num_layers'])
             
         else:
             model_cls = RNN
-            if backbone_config['rnn_type'] == 'lstm':
+            if config['rnn_type'] == 'lstm':
                 model_cls = LSTM
-            elif backbone_config['rnn_type'] == 'gru':
+            elif config['rnn_type'] == 'gru':
                 model_cls = GRU
                 
             self.main_model = model_cls(
-                input_size=backbone_config['out_dim'],
-                hidden_size=backbone_config['out_dim'],
-                num_layers=backbone_config['num_layers'],
+                input_size=config['out_dim'],
+                hidden_size=config['out_dim'],
+                num_layers=config['num_layers'],
                 batch_first=True,
-                bidirectional=backbone_config['bidirectional']
+                bidirectional=config['bidirectional']
             )
         
-        self.pitch_linear_layer = nn.Linear(backbone_config['out_dim'], len(PITCH2ID))
-        self.attack_linear_layer = nn.Linear(backbone_config['out_dim'], 2)
+        self.pitch_linear_layer = nn.Linear(config['out_dim'], len(PITCH2ID))
+        self.attack_linear_layer = nn.Linear(config['out_dim'], 2)
         
     def forward(self, input_tensor):  # (B, C, H, W)
         seq_len = MAX_LENGTH
@@ -132,7 +132,7 @@ class LeadModel(pl.LightningModule):
         extracted = self.extractor(input_tensor)  # (B*M, O)
         extracted = extracted.reshape(B, seq_len, -1)  # (B, M, O)
         
-        if self.use_rnn is False:
+        if self.rnn_type is None:
             hidden_states = self.main_model(extracted, is_causal=self.is_causal)
         else:
             hidden_states, (_, __) = self.main_model(extracted)
@@ -160,6 +160,16 @@ class LeadModel(pl.LightningModule):
         self.attack_loss_w = self.attack_loss_w.to(attack_gt.device)
         pitch_loss_func = nn.CrossEntropyLoss(weight=self.pitch_loss_w)
         attack_loss_func = nn.CrossEntropyLoss(weight=self.attack_loss_w)
+        
+        pitch_pred = pitch_logits.argmax(-1)
+        attack_pred = attack_logits.argmax(-1)
+        """
+        tmp = pitch_gt[0].cpu().numpy().tolist()
+        print("GT:", [ID2PITCH[_] for _ in tmp])
+        tmp = pitch_pred[0].cpu().numpy().tolist()
+        print("pred:", [ID2PITCH[_] for _ in tmp])
+        """
+        self.visualize_results(pitch_gt[0], pitch_pred[0], 'train')
         
         pitch_logits = pitch_logits.reshape(-1, len(PITCH2ID))
         pitch_gt = pitch_gt.flatten()
@@ -196,11 +206,7 @@ class LeadModel(pl.LightningModule):
             # save_image(mel_left_cur, f'tmp/{ID2PITCH[pitch_id]}-{cnt[pitch_id]}.jpg')
             save_image(mel_left_cur, f'tmp/{j}-{ID2PITCH[pitch_id]}.jpg')
             cnt[pitch_id] += 1
-        """"""
-        tmp = pitch_gt[0].cpu().numpy().tolist()
-        print("GT:", [ID2PITCH[_] for _ in tmp])
-        
-        
+        """"""     
         pitch_logits, attack_logits = self.forward(mel_tensor)
         self.pitch_loss_w = self.pitch_loss_w.to(pitch_gt.device)
         self.attack_loss_w = self.attack_loss_w.to(attack_gt.device)
@@ -216,7 +222,7 @@ class LeadModel(pl.LightningModule):
         print("pred:", [ID2PITCH[_] for _ in tmp])
         
         for i in range(pitch_logits.shape[0]):
-            self.visualize_results(pitch_gt[i], pitch_pred[i])
+            self.visualize_results(pitch_gt[i], pitch_pred[i], 'val')
             """    
             print('Pitch-GT:', pitch_gt[i])
             print('Pitch-PD:', pitch_pred[i])
@@ -236,7 +242,7 @@ class LeadModel(pl.LightningModule):
         self.log('val_loss_attack', attack_loss)
         self.log('val_loss', loss)
 
-    def visualize_results(self, gt, pred):
+    def visualize_results(self, gt: torch.Tensor, pred: torch.Tensor, phase: str):
         def plot(lst: List[int], ax: matplotlib.axes.Axes, title: str=None):
             segments = []
             for i, v in enumerate(lst):
@@ -262,5 +268,9 @@ class LeadModel(pl.LightningModule):
         fig.savefig(buf)
         buf.seek(0)
         img = Image.open(buf)
-        self.logger.log_image(key="samples", images=[img,])
+        if phase == 'val':
+            self.logger.log_image(key=f"{phase}_samples", images=[img,])
+        elif phase == 'train':
+            if np.random.rand() >= 0.9:
+                self.logger.log_image(key=f"{phase}_samples", images=[img,])
         plt.close()

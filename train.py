@@ -10,6 +10,7 @@ g.manual_seed(26)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    # ViT-extractor
     parser.add_argument('--image_size', type=int, default=512)
     parser.add_argument('--patch_size', type=int, default=2)
     parser.add_argument('--num_classes', type=int, default=1000)
@@ -17,12 +18,11 @@ if __name__ == '__main__':
     parser.add_argument('--depth', type=int, default=3)
     parser.add_argument('--heads', type=int, default=16)
     parser.add_argument('--mlp_dim', type=int, default=256)
-    
     parser.add_argument('--dropout', type=float, default=0.2)
     parser.add_argument('--out_dim', type=int, default=512)
     parser.add_argument('--extractor_name', type=str, default=None)
     parser.add_argument('--hidden_size', type=int, default=None)
-    
+    # training
     parser.add_argument('--max_epochs', type=int, default=200)
     parser.add_argument('--opt_name', type=str, default='AdamW')
     parser.add_argument('--lr', type=float, default=1e-5)
@@ -32,26 +32,26 @@ if __name__ == '__main__':
     parser.add_argument('--nhead', type=int, default=8)
     parser.add_argument('--num_layers', type=int, default=3)
     # rnn
-    parser.add_argument('--use_rnn', type=bool, default=True)
-    parser.add_argument('--rnn_type', type=str, default='lstm')
+    parser.add_argument('--rnn_type', type=str, default=None)
     parser.add_argument('--bidirectional', type=bool, default=False)
-    
+    # misc
     parser.add_argument('--comment', type=str, default=None)
     parser.add_argument('--debug', type=bool, default=False)
-    
+    parser.add_argument('--project_name', type=str, default='MTTLead')
     
     args = parser.parse_args()
-    backbone_config = vars(args)
+    print(args)
+    config = vars(args)
     
     model = LeadModel(
-        backbone_config=backbone_config,
+        config=config,
         opt_name=args.opt_name,
         lr=args.lr,
         loss_alpha=args.loss_alpha,
         is_causal=args.is_causal
     )
     
-    dataset = LeadNoteDataset(length=256)
+    dataset = LeadNoteDataset(length=512)
     
     train_set, val_set = random_split(dataset, [0.8, 0.2], generator=g)
     train_loader = DataLoader(dataset=train_set, batch_size=2,)
@@ -59,8 +59,8 @@ if __name__ == '__main__':
 
     logger = WandbLogger(
         entity='gariscat',
-        project='MTTLead',
-        config=backbone_config,
+        project=args.project_name,
+        config=config,
         log_model=True,
         save_dir='./ckpt',
     ) if not args.debug else None

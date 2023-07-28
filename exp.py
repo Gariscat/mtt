@@ -1,9 +1,7 @@
 from itertools import product
 import subprocess
 
-OPT_NAMES = ('SGD',)
-LEARNING_RATES = (1e-4, )
-EXTRACTOR_NAMES = (None, )
+PROJECT_NAME = 'MTTLeadAdamW'
 # SIZES = ([512, 512], [256, 256],)
 
 """
@@ -15,11 +13,20 @@ for opt_name, lr, ext_name in product(OPT_NAMES, LEARNING_RATES, EXTRACTOR_NAMES
                     shell=True
                 )
 """    
-for h in (256, 512, 1024):
+for rnn_type, num_layers in (
+    # transformers
+    (None, 6),
+    (None, 3),
+    # rnn
+    ('lstm', 6),
+    ('lstm', 3),
+    ('gru', 6),
+    ('gru', 3),
+):
+    rnn_type = f'--rnn_type {rnn_type}' if rnn_type else ''
     subprocess.call(f'python train.py \
-                    --opt_name SGD \
-                    --lr {1e-4} \
-                    --extractor_name MLP \
-                    --hidden_size {h}', \
+                    {rnn_type} \
+                    --num_layers {num_layers} \
+                    --project_name {PROJECT_NAME}', \
                     shell=True
                 )
