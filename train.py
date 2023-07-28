@@ -6,7 +6,7 @@ import os
 from parse import *
 from torch.utils.data import DataLoader, random_split, ConcatDataset
 g = torch.Generator()
-g.manual_seed(0)
+g.manual_seed(26)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -24,24 +24,27 @@ if __name__ == '__main__':
     parser.add_argument('--hidden_size', type=int, default=None)
     
     parser.add_argument('--max_epochs', type=int, default=200)
-    parser.add_argument('--opt_name', type=str, default='SGD')
-    parser.add_argument('--lr', type=float, default=2e-4)
+    parser.add_argument('--opt_name', type=str, default='AdamW')
+    parser.add_argument('--lr', type=float, default=1e-5)
     parser.add_argument('--loss_alpha', type=float, default=0.5)
+    # transformer
     parser.add_argument('--is_causal', type=bool, default=False)
+    parser.add_argument('--nhead', type=int, default=8)
+    parser.add_argument('--num_layers', type=int, default=3)
+    # rnn
+    parser.add_argument('--use_rnn', type=bool, default=True)
+    parser.add_argument('--rnn_type', type=str, default='lstm')
+    parser.add_argument('--bidirectional', type=bool, default=False)
+    
     parser.add_argument('--comment', type=str, default=None)
     parser.add_argument('--debug', type=bool, default=False)
     
+    
     args = parser.parse_args()
     backbone_config = vars(args)
-    transformer_config = {
-        'd_model': args.out_dim,
-        'nhead': 8,
-        'num_layers': 6,
-    }
     
     model = LeadModel(
         backbone_config=backbone_config,
-        transformer_config=transformer_config,
         opt_name=args.opt_name,
         lr=args.lr,
         loss_alpha=args.loss_alpha,
@@ -68,5 +71,5 @@ if __name__ == '__main__':
         deterministic=True,
         default_root_dir='./ckpt',
     )
-    # trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
-    model.validation_step(next(iter(val_loader)))
+    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+    # model.validation_step(next(iter(val_loader)))

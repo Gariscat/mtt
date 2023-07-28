@@ -4,7 +4,7 @@ from torch import nn, optim
 import torch.nn.functional as F
 from torchvision.utils import save_image
 from torchvision.models import resnet18
-from torch.nn import TransformerEncoderLayer, TransformerEncoder
+from torch.nn import TransformerEncoderLayer, TransformerEncoder, LSTM, GRU, RNN
 import pytorch_lightning as pl
 from parse import MAX_LENGTH, PITCH2ID, ID2PITCH, ATTACK_CNT
 import os, shutil, io
@@ -21,7 +21,6 @@ import wandb
 class LeadModel(pl.LightningModule):
     def __init__(self,
         backbone_config: dict,
-        transformer_config: dict(),
         opt_name: str = 'Adam',
         lr: float = 1e-3,
         loss_alpha: float = 0.8,
@@ -37,12 +36,14 @@ class LeadModel(pl.LightningModule):
         self.image_size = backbone_config['image_size']
         self.loss_alpha = loss_alpha
         self.is_causal = is_causal
+        self.use_rnn = backbone_config['use_rnn']
         self.pitch_loss_w = 1 / torch.Tensor([cnt for id, cnt in PITCH2ID.values()])
-        print("\n\npitch loss weight:", self.pitch_loss_w, '\n\n')
+        # print("\n\npitch loss weight:", self.pitch_loss_w, '\n\n')
         self.attack_loss_w = 1 / torch.Tensor(ATTACK_CNT)
-        print("\n\nattack loss weight:", self.attack_loss_w, '\n\n')
+        # print("\n\nattack loss weight:", self.attack_loss_w, '\n\n')
         ext_name = str(backbone_config['extractor_name'])
         self.extractor_backbone = None
+        
         if 'ViT' in ext_name:
             vit_cls = None
             if ext_name == 'SimpleViT':
@@ -88,22 +89,38 @@ class LeadModel(pl.LightningModule):
                 nn.ReLU(),
                 nn.Linear(hidden_size, backbone_config['out_dim'])
             )
-            
         else:  # None
             flattened_dim = 6 * backbone_config['image_size'] * backbone_config['image_size'] // MAX_LENGTH
             self.extractor = nn.Sequential(
                 nn.Flatten(start_dim=1),
                 nn.Linear(flattened_dim, backbone_config['out_dim'])
             )
-                    
-        encoder_layer = TransformerEncoderLayer(
-            d_model=transformer_config['d_model'],
-            nhead=transformer_config['nhead'],
-            batch_first=True,
-        )
-        self.transformer = TransformerEncoder(encoder_layer, num_layers=transformer_config['num_layers'])
-        self.pitch_linear_layer = nn.Linear(transformer_config['d_model'], len(PITCH2ID))
-        self.attack_linear_layer = nn.Linear(transformer_config['d_model'], 2)
+        
+        if backbone_config['use_rnn'] is False:
+            encoder_layer = TransformerEncoderLayer(
+                d_model=backbone_config['out_dim'],
+                nhead=backbone_config['nhead'],
+                batch_first=True,
+            )
+            self.main_model = TransformerEncoder(encoder_layer, num_layers=backbone_config['num_layers'])
+            
+        else:
+            model_cls = RNN
+            if backbone_config['rnn_type'] == 'lstm':
+                model_cls = LSTM
+            elif backbone_config['rnn_type'] == 'gru':
+                model_cls = GRU
+                
+            self.main_model = model_cls(
+                input_size=backbone_config['out_dim'],
+                hidden_size=backbone_config['out_dim'],
+                num_layers=backbone_config['num_layers'],
+                batch_first=True,
+                bidirectional=backbone_config['bidirectional']
+            )
+        
+        self.pitch_linear_layer = nn.Linear(backbone_config['out_dim'], len(PITCH2ID))
+        self.attack_linear_layer = nn.Linear(backbone_config['out_dim'], 2)
         
     def forward(self, input_tensor):  # (B, C, H, W)
         seq_len = MAX_LENGTH
@@ -115,7 +132,11 @@ class LeadModel(pl.LightningModule):
         extracted = self.extractor(input_tensor)  # (B*M, O)
         extracted = extracted.reshape(B, seq_len, -1)  # (B, M, O)
         
-        hidden_states = self.transformer(extracted, is_causal=self.is_causal)
+        if self.use_rnn is False:
+            hidden_states = self.main_model(extracted, is_causal=self.is_causal)
+        else:
+            hidden_states, (_, __) = self.main_model(extracted)
+            
         pitch_logits = self.pitch_linear_layer(hidden_states)
         attack_logits = self.attack_linear_layer(hidden_states)
         return pitch_logits, attack_logits
@@ -161,10 +182,10 @@ class LeadModel(pl.LightningModule):
         cnt = [0] * len(PITCH2ID)
         stride = mel_left_tensor.shape[-1] // MAX_LENGTH
         
-        plt.imshow(mel_left_tensor[0].permute(1, 2, 0).numpy())
+        """plt.imshow(mel_left_tensor[0].permute(1, 2, 0).numpy())
         plt.savefig('tmp.jpg')
         plt.close()
-        print(json_path)
+        print(json_path)"""
         
         for j in range(MAX_LENGTH):
             pitch_id = pitch_gt[0][j].item()
@@ -177,7 +198,7 @@ class LeadModel(pl.LightningModule):
             cnt[pitch_id] += 1
         """"""
         tmp = pitch_gt[0].cpu().numpy().tolist()
-        print([ID2PITCH[_] for _ in tmp])
+        print("GT:", [ID2PITCH[_] for _ in tmp])
         
         
         pitch_logits, attack_logits = self.forward(mel_tensor)
@@ -188,6 +209,11 @@ class LeadModel(pl.LightningModule):
         
         pitch_pred = pitch_logits.argmax(-1)
         attack_pred = attack_logits.argmax(-1)
+        
+        tmp = pitch_gt[0].cpu().numpy().tolist()
+        print("GT:", [ID2PITCH[_] for _ in tmp])
+        tmp = pitch_pred[0].cpu().numpy().tolist()
+        print("pred:", [ID2PITCH[_] for _ in tmp])
         
         for i in range(pitch_logits.shape[0]):
             self.visualize_results(pitch_gt[i], pitch_pred[i])

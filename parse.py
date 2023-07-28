@@ -10,12 +10,12 @@ from sklearn.utils.class_weight import compute_class_weight
 from torchvision.transforms.functional import rgb_to_grayscale
 import matplotlib.pyplot as plt
 
-DATA_PATH = 'data'
+DATA_PATH = '/root/mtt/data'
 NUM_BARS = 8
 RESOLUTION = 1 / 16  # prog-house
 MAX_LENGTH = int(NUM_BARS/RESOLUTION)
 NOTE_VALUE_SCALE = 1.
-TOT_TRACK = 1024
+TOT_TRACK = 512
 FILE_IDS = [str(i) for i in range(TOT_TRACK)]
 
 """
