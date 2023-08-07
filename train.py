@@ -23,9 +23,9 @@ if __name__ == '__main__':
     parser.add_argument('--extractor_name', type=str, default=None)
     parser.add_argument('--hidden_size', type=int, default=None)
     # training
-    parser.add_argument('--max_epochs', type=int, default=200)
+    parser.add_argument('--max_epochs', type=int, default=50)
     parser.add_argument('--opt_name', type=str, default='AdamW')
-    parser.add_argument('--lr', type=float, default=1e-5)
+    parser.add_argument('--lr', type=float, default=5e-5)
     parser.add_argument('--loss_alpha', type=float, default=0.5)
     # transformer
     parser.add_argument('--is_causal', type=bool, default=False)
@@ -38,8 +38,9 @@ if __name__ == '__main__':
     parser.add_argument('--comment', type=str, default=None)
     parser.add_argument('--debug', type=bool, default=False)
     parser.add_argument('--project_name', type=str, default='MTTLead')
-    
+    parser.add_argument('--dataset_length', type=int, default=5000)
     args = parser.parse_args()
+    args.dataset_length = TOT_TRACK
     print(args)
     config = vars(args)
     
@@ -51,7 +52,7 @@ if __name__ == '__main__':
         is_causal=args.is_causal
     )
     
-    dataset = LeadNoteDataset(length=512)
+    dataset = LeadNoteDataset(length=args.dataset_length)
     
     train_set, val_set = random_split(dataset, [0.8, 0.2], generator=g)
     train_loader = DataLoader(dataset=train_set, batch_size=2,)

@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 from PIL import Image
 import wandb
+from sklearn import metrics
 
 class LeadModel(pl.LightningModule):
     def __init__(self,
@@ -169,7 +170,7 @@ class LeadModel(pl.LightningModule):
         tmp = pitch_pred[0].cpu().numpy().tolist()
         print("pred:", [ID2PITCH[_] for _ in tmp])
         """
-        self.visualize_results(pitch_gt[0], pitch_pred[0], 'train')
+        # self.visualize_pitch(pitch_gt[0], pitch_pred[0], 'train')
         
         pitch_logits = pitch_logits.reshape(-1, len(PITCH2ID))
         pitch_gt = pitch_gt.flatten()
@@ -216,19 +217,34 @@ class LeadModel(pl.LightningModule):
         pitch_pred = pitch_logits.argmax(-1)
         attack_pred = attack_logits.argmax(-1)
         
-        tmp = pitch_gt[0].cpu().numpy().tolist()
-        print("GT:", [ID2PITCH[_] for _ in tmp])
-        tmp = pitch_pred[0].cpu().numpy().tolist()
-        print("pred:", [ID2PITCH[_] for _ in tmp])
+        # tmp = pitch_gt[0].cpu().numpy().tolist()
+        # print("GT:", [ID2PITCH[_] for _ in tmp])
+        # tmp = pitch_pred[0].cpu().numpy().tolist()
+        # print("pred:", [ID2PITCH[_] for _ in tmp])
         
         for i in range(pitch_logits.shape[0]):
-            self.visualize_results(pitch_gt[i], pitch_pred[i], 'val')
+            if self.loss_alpha == 1: # pitch only
+                self.visualize_pitch(pitch_gt[i], pitch_pred[i], 'val')
+            elif self.loss_alpha == 0: # onset only
+                self.visualize_onset(attack_gt[i], attack_pred[i], 'val')
             """    
             print('Pitch-GT:', pitch_gt[i])
             print('Pitch-PD:', pitch_pred[i])
             print('Attack-GT:', attack_gt[i])
             print('Attack-PD:', attack_pred[i])
             """
+        
+        precision, recall, fscore, support = metrics.precision_recall_fscore_support(
+            y_true=attack_gt.flatten().cpu().numpy(),
+            y_pred=attack_pred.flatten().cpu().numpy(),
+        )
+        """print(precision)
+        print(recall)
+        print(fscore)
+        exit()"""
+        self.log('val_attack_precision', precision[1])
+        self.log('val_attack_recall', recall[1])
+        self.log('val_attack_fscore', fscore[1])
         
         pitch_logits = pitch_logits.reshape(-1, len(PITCH2ID))
         pitch_gt = pitch_gt.flatten()
@@ -242,7 +258,7 @@ class LeadModel(pl.LightningModule):
         self.log('val_loss_attack', attack_loss)
         self.log('val_loss', loss)
 
-    def visualize_results(self, gt: torch.Tensor, pred: torch.Tensor, phase: str):
+    def visualize_pitch(self, gt: torch.Tensor, pred: torch.Tensor, phase: str):
         def plot(lst: List[int], ax: matplotlib.axes.Axes, title: str=None):
             segments = []
             for i, v in enumerate(lst):
@@ -269,8 +285,36 @@ class LeadModel(pl.LightningModule):
         buf.seek(0)
         img = Image.open(buf)
         if phase == 'val':
-            self.logger.log_image(key=f"{phase}_samples", images=[img,])
+            self.logger.log_image(key=f"{phase}_pitch_samples", images=[img,])
         elif phase == 'train':
             if np.random.rand() >= 0.9:
-                self.logger.log_image(key=f"{phase}_samples", images=[img,])
+                self.logger.log_image(key=f"{phase}_pitch_samples", images=[img,])
+        plt.close()
+        
+    def visualize_onset(self, gt: torch.Tensor, pred: torch.Tensor, phase: str):
+        def plot(lst: List[int], ax: matplotlib.axes.Axes, title: str=None):
+            ax.set_title(title)
+            for i, x in enumerate(lst):
+                if x == 0:
+                    continue
+                ax.vlines(i, 0, 1, color='r' if 'pred' in title else 'g', alpha=0.9,
+                    linestyle='--', label='onsets'
+                )
+            ax.legend()
+                
+        fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True)
+        gt = gt.detach().cpu().numpy().tolist()
+        pred = pred.detach().cpu().numpy().tolist()
+        plot(gt, axes[0], 'ground truth')
+        plot(pred, axes[1], 'prediction')
+
+        buf = io.BytesIO()
+        fig.savefig(buf)
+        buf.seek(0)
+        img = Image.open(buf)
+        if phase == 'val':
+            self.logger.log_image(key=f"{phase}_onset_samples", images=[img,])
+        elif phase == 'train':
+            if np.random.rand() >= 0.9:
+                self.logger.log_image(key=f"{phase}_onset_samples", images=[img,])
         plt.close()
