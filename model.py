@@ -25,7 +25,7 @@ class LeadModel(pl.LightningModule):
         opt_name: str = 'Adam',
         lr: float = 1e-3,
         loss_alpha: float = 0.8,
-        is_causal: bool = True,
+        is_causal: bool = False,
     ) -> None:
         super().__init__()
         
