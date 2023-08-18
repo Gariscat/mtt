@@ -28,8 +28,8 @@ def plot(
         if x == 0:
             continue
         pitch = piano_key2midi_id(ID2PITCH[pitch_lst[i]])
-        ax.vlines(i, pitch, pitch+0.5, color='r' if 'pred' in title else 'g', alpha=0.9,
-            linestyle='--', label='onsets'
+        ax.vlines(i, pitch-0.5, pitch+0.5, color='r' if 'pred' in title else 'g', alpha=0.9,
+            linestyle='dotted', label='onsets'
         )
     
     ax.autoscale()
@@ -98,8 +98,10 @@ if __name__ == '__main__':
     # train_loader = DataLoader(dataset=train_set, batch_size=1,)
     val_loader = DataLoader(dataset=val_set, batch_size=1,)
     
+    print(ID2PITCH)
+    
     for batch in tqdm(val_loader):
-        pitch_gt, onset_gt, mel_left, mel_right, _ = batch
+        pitch_gt, onset_gt, mel_left, mel_right, json_path = batch
         mel_tensor = torch.cat((mel_left, mel_right), dim=1).to(device)
         
         pitch_logits, _ = pitch_model.forward(mel_tensor)
@@ -123,7 +125,7 @@ if __name__ == '__main__':
                     onset_pred[i] = 0
             else:
                 if pitch_pred[i]:
-                    if i == 0 or pitch_pred[i-1] == 0:
+                    if i == 0 or pitch_pred[i-1] != pitch_pred[i]:
                         pitch_pred[i] = 0
                         
         # plot
@@ -131,6 +133,7 @@ if __name__ == '__main__':
         fig, axes = plt.subplots(nrows=2, ncols=1, sharex=True)
         plot(pitch_gt, onset_gt, axes[0], 'ground truth')
         plot(pitch_pred, onset_pred, axes[1], 'prediction')
+        plt.suptitle(json_path)
         
         # log
         
