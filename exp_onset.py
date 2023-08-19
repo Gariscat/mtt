@@ -1,7 +1,7 @@
 from itertools import product
 import subprocess
 
-PROJECT_NAME = 'MTTLeadAdamWPitchVis'
+PROJECT_NAME = 'MTTLeadAdamWOnsetVis'
 # SIZES = ([512, 512], [256, 256],)
 
 """
@@ -30,6 +30,6 @@ for rnn_type, num_layers in (
                     {rnn_type} \
                     --num_layers {num_layers} \
                     --project_name {PROJECT_NAME} \
-                    --loss_alpha 1', \
+                    --loss_alpha 0', \
                     shell=True
                 )

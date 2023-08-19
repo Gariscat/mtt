@@ -28,9 +28,7 @@ def plot(
         if x == 0:
             continue
         pitch = piano_key2midi_id(ID2PITCH[pitch_lst[i]])
-        ax.vlines(i, pitch-0.5, pitch+0.5, color='r' if 'pred' in title else 'g', alpha=0.9,
-            linestyle='dotted', label='onsets'
-        )
+        ax.vlines(i, pitch-0.5, pitch+0.5, color='r' if 'pred' in title else 'g', alpha=0.9, linestyle='solid')
     
     ax.autoscale()
     m = ax.get_yticks().tolist()
