@@ -16,12 +16,12 @@ for opt_name, lr, ext_name in product(OPT_NAMES, LEARNING_RATES, EXTRACTOR_NAMES
 for rnn_type, num_layers in (
     # transformers
     (None, 1),
-    # (None, 2),
-    # (None, 3),
+    (None, 2),
+    (None, 3),
     # rnn
-    # ('lstm', 1),
-    # ('lstm', 2),
-    # ('lstm', 3),
+    ('lstm', 1),
+    ('lstm', 2),
+    ('lstm', 3),
     # ('gru', 6),
     # ('gru', 3),
 ):
@@ -30,6 +30,7 @@ for rnn_type, num_layers in (
                     {rnn_type} \
                     --num_layers {num_layers} \
                     --project_name {PROJECT_NAME} \
-                    --loss_alpha 0', \
+                    --loss_alpha 0 \
+                    --max_epochs 30', \
                     shell=True
                 )

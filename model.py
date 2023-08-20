@@ -205,7 +205,7 @@ class LeadModel(pl.LightningModule):
             # mel_left_cur = F.interpolate(mel_left_cur, (512, 4))
             # mel_left_cur = torch.cat([mel_left_cur[i] for i in range(mel_left_cur.shape[0])], dim=-1)
             # save_image(mel_left_cur, f'tmp/{ID2PITCH[pitch_id]}-{cnt[pitch_id]}.jpg')
-            save_image(mel_left_cur, f'tmp/{j}-{ID2PITCH[pitch_id]}.jpg')
+            ### save_image(mel_left_cur, f'tmp/{j}-{ID2PITCH[pitch_id]}.jpg')
             cnt[pitch_id] += 1
         """"""     
         pitch_logits, attack_logits = self.forward(mel_tensor)
@@ -223,6 +223,8 @@ class LeadModel(pl.LightningModule):
         # print("pred:", [ID2PITCH[_] for _ in tmp])
         
         for i in range(pitch_logits.shape[0]):
+            if np.random.rand() > 0.5: # visualize only half the results to speed up training
+                continue
             if self.loss_alpha == 1: # pitch only
                 self.visualize_pitch(pitch_gt[i], pitch_pred[i], 'val')
             elif self.loss_alpha == 0: # onset only
