@@ -1,7 +1,7 @@
 from itertools import product
 import subprocess
 
-PROJECT_NAME = 'MTTLeadAdamWOnsetVis'
+PROJECT_NAME = 'MTTLeadAdamWOnsetMMM'
 # SIZES = ([512, 512], [256, 256],)
 
 """
@@ -15,12 +15,12 @@ for opt_name, lr, ext_name in product(OPT_NAMES, LEARNING_RATES, EXTRACTOR_NAMES
 """    
 for rnn_type, num_layers in (
     # transformers
-    (None, 1),
     # (None, 2),
+    # (None, 4),
     # (None, 3),
     # rnn
-    # ('lstm', 1),
     # ('lstm', 2),
+    ('lstm', 4),
     # ('lstm', 3),
     # ('gru', 6),
     # ('gru', 3),

@@ -6,8 +6,13 @@ import wandb
 import matplotlib
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from sklearn.metrics import f1_score
 g = torch.Generator()
 g.manual_seed(26)
+
+# num_layers = 4
+pitch_ckpt = '/root/mtt/ckpt/MTTLeadAdamWPitchMMM/6u6jwmh4/checkpoints/epoch=49-step=160000.ckpt'
+onset_ckpt = '/root/mtt/ckpt/MTTLeadAdamWOnsetMMM/odeonqgr/checkpoints/epoch=49-step=160000.ckpt'
 
 
 def plot(
@@ -60,7 +65,7 @@ if __name__ == '__main__':
     # transformer
     parser.add_argument('--is_causal', type=bool, default=False)
     parser.add_argument('--nhead', type=int, default=8)
-    parser.add_argument('--num_layers', type=int, default=1)
+    parser.add_argument('--num_layers', type=int, default=4)
     # rnn
     parser.add_argument('--rnn_type', type=str, default=None)
     parser.add_argument('--bidirectional', type=bool, default=False)
@@ -76,16 +81,16 @@ if __name__ == '__main__':
     
     wandb.init(
         entity='gariscat',
-        project='MTTLeadJointInference',
+        project='MTTLeadJointInferenceMMM',
     )
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     pitch_model = LeadModel.load_from_checkpoint(
-        '/root/mtt/ckpt/MTTLeadAdamWPitchVis/2paueou0/checkpoints/epoch=45-step=92000.ckpt',
+        pitch_ckpt,
         config=config,
         loss_alpha=1
     ).to(device)
     onset_model = LeadModel.load_from_checkpoint(
-        '/root/mtt/ckpt/MTTLeadAdamWOnsetVis/by7630b0/checkpoints/epoch=21-step=44000.ckpt',
+        onset_ckpt,
         config=config,
         loss_alpha=0,
     ).to(device)
@@ -97,6 +102,9 @@ if __name__ == '__main__':
     val_loader = DataLoader(dataset=val_set, batch_size=1,)
     
     print(ID2PITCH)
+    
+    all_onset_gt = []
+    all_onset_pred = []
     
     for batch in tqdm(val_loader):
         pitch_gt, onset_gt, mel_left, mel_right, json_path = batch
@@ -144,3 +152,12 @@ if __name__ == '__main__':
         # print(type(img))
         wandb.log({"joint_inference_samples": img})
         plt.close()
+        
+        all_onset_gt += onset_gt
+        all_onset_pred += onset_pred
+        
+        
+    # calculate the metrics
+        
+    onset_f1 = f1_score(np.array(all_onset_gt), np.array(all_onset_pred))
+    print("onset_f1:", onset_f1)

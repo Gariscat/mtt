@@ -15,7 +15,7 @@ NUM_BARS = 8
 RESOLUTION = 1 / 16  # prog-house
 MAX_LENGTH = int(NUM_BARS/RESOLUTION)
 NOTE_VALUE_SCALE = 1.
-TOT_TRACK = 5000
+TOT_TRACK = 8000
 FILE_IDS = [str(i) for i in range(TOT_TRACK)]
 
 """
