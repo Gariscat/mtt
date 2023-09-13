@@ -16,7 +16,7 @@ def get_mel(y: np.ndarray, sr: int):
         mel_spec = librosa.power_to_db(mel_spec, ref=np.max)"""
         S = np.abs(librosa.stft(y[i], n_fft=4096))**2
         fig, ax = plt.subplots(nrows=1, sharex=True)
-        img = librosa.display.specshow(librosa.amplitude_to_db(S, ref=np.max), sr=sr,
+        img = librosa.display.specshow(librosa.amplitude_to_db(S, ref=np.max),
             y_axis='log', x_axis='time', ax=ax)
         plt.axis('off')
         plt.savefig('tmp.jpg', dpi=600, bbox_inches='tight', pad_inches=0)
@@ -30,7 +30,8 @@ def get_mel(y: np.ndarray, sr: int):
         
 
 if __name__ == '__main__':
-    y, sr = librosa.load('/root/forever.wav', mono=False)
+    wav_path = '/root/forever.wav'
+    y, sr = librosa.load(wav_path, mono=False)
     print(y.shape)
     get_mel(y, sr)
     
@@ -55,7 +56,7 @@ if __name__ == '__main__':
     # transformer
     parser.add_argument('--is_causal', type=bool, default=False)
     parser.add_argument('--nhead', type=int, default=8)
-    parser.add_argument('--num_layers', type=int, default=4)
+    parser.add_argument('--num_layers', type=int, default=2)
     # rnn
     parser.add_argument('--rnn_type', type=str, default=None)
     parser.add_argument('--bidirectional', type=bool, default=False)
@@ -66,6 +67,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset_length', type=int, default=5000)
     args = parser.parse_args()
     args.dataset_length = TOT_TRACK
+    args.wav_path = wav_path
     print(args)
     config = vars(args)
     
@@ -121,7 +123,6 @@ if __name__ == '__main__':
         
     fig, axes = plt.subplots()
     plot(pitch_pred, onset_pred, axes, 'prediction')
-    plt.suptitle(json_path)
         
     # log
     buf = io.BytesIO()
