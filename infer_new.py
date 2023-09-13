@@ -87,6 +87,9 @@ if __name__ == '__main__':
         loss_alpha=0,
     ).to(device)
     
+    pitch_model.eval()
+    onset_model.eval()
+    
     mel_path_left = '/root/tmp_left.jpg'
     mel_path_right = '/root/tmp_right.jpg'
     mel_left_tensor = read_image(mel_path_left).float() / 255

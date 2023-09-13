@@ -15,6 +15,10 @@ g.manual_seed(26)
 pitch_ckpt = '/root/mtt/ckpt/MTTLeadAdamWPitchMMM/mb7w91gv/checkpoints/epoch=49-step=160000.ckpt'
 onset_ckpt = '/root/mtt/ckpt/MTTLeadAdamWOnsetMMM/ozng3852/checkpoints/epoch=49-step=160000.ckpt'
 
+# num_layers = 4
+### pitch_ckpt = '/root/mtt/ckpt/MTTLeadAdamWPitchMMM/6u6jwmh4/checkpoints/epoch=49-step=160000.ckpt'
+### onset_ckpt = '/root/mtt/ckpt/MTTLeadAdamWOnsetMMM/odeonqgr/checkpoints/epoch=49-step=160000.ckpt'
+
 
 def plot(
     pitch_lst: List[int],
@@ -99,7 +103,10 @@ if __name__ == '__main__':
         config=config,
         loss_alpha=0,
     ).to(device)
-    print(pitch_model.is_causal, onset_model.is_causal)
+    
+    pitch_model.eval()
+    onset_model.eval()
+    
     dataset = LeadNoteDataset(length=args.dataset_length)
     
     train_set, val_set = random_split(dataset, [0.8, 0.2], generator=g)
