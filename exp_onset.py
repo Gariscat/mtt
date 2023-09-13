@@ -30,6 +30,7 @@ for rnn_type, num_layers in (
                     {rnn_type} \
                     --num_layers {num_layers} \
                     --project_name {PROJECT_NAME} \
-                    --loss_alpha 0', \
+                    --loss_alpha 0 \
+                    --max_epochs 30', \
                     shell=True
                 )

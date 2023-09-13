@@ -6,6 +6,7 @@ import wandb
 import matplotlib
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from copy import deepcopy
 from sklearn.metrics import f1_score
 g = torch.Generator()
 g.manual_seed(26)
@@ -65,7 +66,7 @@ if __name__ == '__main__':
     # transformer
     parser.add_argument('--is_causal', type=bool, default=False)
     parser.add_argument('--nhead', type=int, default=8)
-    parser.add_argument('--num_layers', type=int, default=4)
+    parser.add_argument('--num_layers', type=int, default=1)
     # rnn
     parser.add_argument('--rnn_type', type=str, default=None)
     parser.add_argument('--bidirectional', type=bool, default=False)
@@ -84,11 +85,15 @@ if __name__ == '__main__':
         project='MTTLeadJointInferenceMMM',
     )
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    pitch_config = deepcopy(config)
+    pitch_config['num_layers'] = 3
     pitch_model = LeadModel.load_from_checkpoint(
         pitch_ckpt,
         config=config,
         loss_alpha=1
     ).to(device)
+    onset_config = deepcopy(config)
+    onset_config['num_layers'] = 1
     onset_model = LeadModel.load_from_checkpoint(
         onset_ckpt,
         config=config,
