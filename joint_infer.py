@@ -11,14 +11,6 @@ from sklearn.metrics import f1_score
 g = torch.Generator()
 g.manual_seed(26)
 
-# num_layers = 2
-pitch_ckpt = '/root/mtt/ckpt/MTTLeadAdamWPitchMMM/mb7w91gv/checkpoints/epoch=49-step=160000.ckpt'
-onset_ckpt = '/root/mtt/ckpt/MTTLeadAdamWOnsetMMM/ozng3852/checkpoints/epoch=49-step=160000.ckpt'
-
-# num_layers = 4
-### pitch_ckpt = '/root/mtt/ckpt/MTTLeadAdamWPitchMMM/6u6jwmh4/checkpoints/epoch=49-step=160000.ckpt'
-### onset_ckpt = '/root/mtt/ckpt/MTTLeadAdamWOnsetMMM/odeonqgr/checkpoints/epoch=49-step=160000.ckpt'
-
 
 def plot(
     pitch_lst: List[int],
@@ -70,7 +62,7 @@ if __name__ == '__main__':
     # transformer
     parser.add_argument('--is_causal', type=bool, default=False)
     parser.add_argument('--nhead', type=int, default=8)
-    parser.add_argument('--num_layers', type=int, default=2)
+    parser.add_argument('--num_layers', type=int, default=4)
     # rnn
     parser.add_argument('--rnn_type', type=str, default=None)
     parser.add_argument('--bidirectional', type=bool, default=False)
@@ -83,6 +75,13 @@ if __name__ == '__main__':
     args.dataset_length = TOT_TRACK
     print(args)
     config = vars(args)
+    
+    if args.num_layers == 2:
+        pitch_ckpt = '/root/mtt/ckpt/MTTLeadAdamWPitchMMM/mb7w91gv/checkpoints/epoch=49-step=160000.ckpt'
+        onset_ckpt = '/root/mtt/ckpt/MTTLeadAdamWOnsetMMM/ozng3852/checkpoints/epoch=49-step=160000.ckpt'
+    elif args.num_layers == 4:
+        pitch_ckpt = '/root/mtt/ckpt/MTTLeadAdamWPitchMMM/6u6jwmh4/checkpoints/epoch=49-step=160000.ckpt'
+        onset_ckpt = '/root/mtt/ckpt/MTTLeadAdamWOnsetMMM/odeonqgr/checkpoints/epoch=49-step=160000.ckpt'
     
     wandb.init(
         entity='gariscat',
@@ -117,6 +116,8 @@ if __name__ == '__main__':
     
     all_onset_gt = []
     all_onset_pred = []
+    all_pitch_gt = []
+    all_pitch_pred = []
     
     for batch in tqdm(val_loader):
         pitch_gt, onset_gt, mel_left, mel_right, json_path = batch
@@ -167,9 +168,13 @@ if __name__ == '__main__':
         
         all_onset_gt += onset_gt
         all_onset_pred += onset_pred
+        all_pitch_gt += pitch_gt
+        all_pitch_pred += pitch_pred
         
         
     # calculate the metrics
         
     onset_f1 = f1_score(np.array(all_onset_gt), np.array(all_onset_pred))
+    pitch_f1 = f1_score(np.array(all_pitch_gt), np.array(all_pitch_pred), average='macro')
     print("onset_f1:", onset_f1)
+    print("pitch_f1:", pitch_f1)

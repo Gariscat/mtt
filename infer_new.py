@@ -30,7 +30,7 @@ def get_mel(y: np.ndarray, sr: int):
         
 
 if __name__ == '__main__':
-    wav_path = '/root/forever.wav'
+    wav_path = '/root/p.r.o.g.wav'
     y, sr = librosa.load(wav_path, mono=False)
     print(y.shape)
     get_mel(y, sr)
@@ -70,6 +70,13 @@ if __name__ == '__main__':
     args.wav_path = wav_path
     print(args)
     config = vars(args)
+    
+    if args.num_layers == 2:
+        pitch_ckpt = '/root/mtt/ckpt/MTTLeadAdamWPitchMMM/mb7w91gv/checkpoints/epoch=49-step=160000.ckpt'
+        onset_ckpt = '/root/mtt/ckpt/MTTLeadAdamWOnsetMMM/ozng3852/checkpoints/epoch=49-step=160000.ckpt'
+    elif args.num_layers == 4:
+        pitch_ckpt = '/root/mtt/ckpt/MTTLeadAdamWPitchMMM/6u6jwmh4/checkpoints/epoch=49-step=160000.ckpt'
+        onset_ckpt = '/root/mtt/ckpt/MTTLeadAdamWOnsetMMM/odeonqgr/checkpoints/epoch=49-step=160000.ckpt'
     
     wandb.init(
         entity='gariscat',
