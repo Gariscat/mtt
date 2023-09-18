@@ -191,7 +191,7 @@ class LeadModel(pl.LightningModule):
         
         os.makedirs('tmp', exist_ok=True)
         cnt = [0] * len(PITCH2ID)
-        stride = mel_left_tensor.shape[-1] // MAX_LENGTH
+        ### stride = mel_left_tensor.shape[-1] // MAX_LENGTH
         
         """plt.imshow(mel_left_tensor[0].permute(1, 2, 0).numpy())
         plt.savefig('tmp.jpg')
@@ -200,14 +200,14 @@ class LeadModel(pl.LightningModule):
         
         for j in range(MAX_LENGTH):
             pitch_id = pitch_gt[0][j].item()
-            mel_left_cur = mel_left_tensor[0, :, :, j*stride:(j+1)*stride].cpu()
+            ### mel_left_cur = mel_left_tensor[0, :, :, j*stride:(j+1)*stride].cpu()
         
             # mel_left_cur = F.interpolate(mel_left_cur, (512, 4))
             # mel_left_cur = torch.cat([mel_left_cur[i] for i in range(mel_left_cur.shape[0])], dim=-1)
             # save_image(mel_left_cur, f'tmp/{ID2PITCH[pitch_id]}-{cnt[pitch_id]}.jpg')
             ### save_image(mel_left_cur, f'tmp/{j}-{ID2PITCH[pitch_id]}.jpg')
             cnt[pitch_id] += 1
-        """"""     
+        """"""
         pitch_logits, attack_logits = self.forward(mel_tensor)
         self.pitch_loss_w = self.pitch_loss_w.to(pitch_gt.device)
         self.attack_loss_w = self.attack_loss_w.to(attack_gt.device)
@@ -221,7 +221,7 @@ class LeadModel(pl.LightningModule):
         # print("GT:", [ID2PITCH[_] for _ in tmp])
         # tmp = pitch_pred[0].cpu().numpy().tolist()
         # print("pred:", [ID2PITCH[_] for _ in tmp])
-        
+        """
         for i in range(pitch_logits.shape[0]):
             if np.random.rand() > 0.5: # visualize only half the results to speed up training
                 continue
@@ -229,21 +229,18 @@ class LeadModel(pl.LightningModule):
                 self.visualize_pitch(pitch_gt[i], pitch_pred[i], 'val')
             elif self.loss_alpha == 0: # onset only
                 self.visualize_onset(attack_gt[i], attack_pred[i], 'val')
-            """    
+                
             print('Pitch-GT:', pitch_gt[i])
             print('Pitch-PD:', pitch_pred[i])
             print('Attack-GT:', attack_gt[i])
             print('Attack-PD:', attack_pred[i])
-            """
+        """    
         
         precision, recall, fscore, support = metrics.precision_recall_fscore_support(
             y_true=attack_gt.flatten().cpu().numpy(),
             y_pred=attack_pred.flatten().cpu().numpy(),
         )
-        """print(precision)
-        print(recall)
-        print(fscore)
-        exit()"""
+        
         self.log('val_attack_precision', precision[1])
         self.log('val_attack_recall', recall[1])
         self.log('val_attack_fscore', fscore[1])

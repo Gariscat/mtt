@@ -1,7 +1,7 @@
 from itertools import product
 import subprocess
 
-PROJECT_NAME = 'MTTLeadAdamWOnsetMMM'
+PROJECT_NAME = 'MTTLeadOnsetMMMRetrain'
 # SIZES = ([512, 512], [256, 256],)
 
 """
@@ -19,7 +19,7 @@ for rnn_type, num_layers in (
     # (None, 4),
     # (None, 3),
     # rnn
-    # ('lstm', 2),
+    ('lstm', 2),
     ('lstm', 4),
     # ('lstm', 3),
     # ('gru', 6),
@@ -31,6 +31,6 @@ for rnn_type, num_layers in (
                     --num_layers {num_layers} \
                     --project_name {PROJECT_NAME} \
                     --loss_alpha 0 \
-                    --max_epochs 30', \
+                    --max_epochs 20', \
                     shell=True
                 )

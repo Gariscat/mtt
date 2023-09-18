@@ -77,11 +77,11 @@ if __name__ == '__main__':
     config = vars(args)
     
     if args.num_layers == 2:
-        pitch_ckpt = '/root/mtt/ckpt/MTTLeadAdamWPitchMMM/mb7w91gv/checkpoints/epoch=49-step=160000.ckpt'
-        onset_ckpt = '/root/mtt/ckpt/MTTLeadAdamWOnsetMMM/ozng3852/checkpoints/epoch=49-step=160000.ckpt'
+        pitch_ckpt = '/root/mtt/ckpt/MTTLeadPitchMMMRetrain/aymgyy5c/checkpoints/epoch=19-step=64000.ckpt'
+        onset_ckpt = '/root/mtt/ckpt/MTTLeadOnsetMMMRetrain/ub4g9z64/checkpoints/epoch=19-step=64000.ckpt'
     elif args.num_layers == 4:
-        pitch_ckpt = '/root/mtt/ckpt/MTTLeadAdamWPitchMMM/6u6jwmh4/checkpoints/epoch=49-step=160000.ckpt'
-        onset_ckpt = '/root/mtt/ckpt/MTTLeadAdamWOnsetMMM/odeonqgr/checkpoints/epoch=49-step=160000.ckpt'
+        pitch_ckpt = '/root/mtt/ckpt/MTTLeadPitchMMMRetrain/bvgo5p4s/checkpoints/epoch=19-step=64000.ckpt'
+        onset_ckpt = '/root/mtt/ckpt/MTTLeadOnsetMMMRetrain/c2nkrark/checkpoints/epoch=19-step=64000.ckpt'
     
     wandb.init(
         entity='gariscat',
